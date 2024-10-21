@@ -1,13 +1,13 @@
 "use client";
-import type { ReactNode } from "react";
-import React, { useEffect, useState } from "react";
-import { createRoot } from "react-dom/client";
-
-import classNames from "@/utils/classnames";
 import { CheckCircleIcon, XCircleIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
 import { BsExclamationTriangleFill } from "react-icons/bs";
 import { HiInformationCircle } from "react-icons/hi";
 import { createContext, useContext } from "use-context-selector";
+
+import classNames from "@/utils/classnames";
 
 export type IToastProps = {
   type?: "success" | "error" | "warning" | "info";
@@ -42,7 +42,7 @@ const Toast = ({
         type === "success" ? "bg-green-50" : "",
         type === "error" ? "bg-red-50" : "",
         type === "warning" ? "bg-yellow-50" : "",
-        type === "info" ? "bg-blue-50" : "",
+        type === "info" ? "bg-blue-50" : ""
       )}
     >
       <div className="flex">
@@ -76,7 +76,7 @@ const Toast = ({
               type === "success" ? "text-green-800" : "",
               type === "error" ? "text-red-800" : "",
               type === "warning" ? "text-yellow-800" : "",
-              type === "info" ? "text-blue-800" : "",
+              type === "info" ? "text-blue-800" : ""
             )}
           >
             {message}
@@ -88,7 +88,7 @@ const Toast = ({
                 type === "success" ? "text-green-700" : "",
                 type === "error" ? "text-red-700" : "",
                 type === "warning" ? "text-yellow-700" : "",
-                type === "info" ? "text-blue-700" : "",
+                type === "info" ? "text-blue-700" : ""
               )}
             >
               {children}
@@ -100,17 +100,13 @@ const Toast = ({
   );
 };
 
-export const ToastProvider = ({
-  children,
-}: {
-  children: ReactNode;
-}) => {
+export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const placeholder: IToastProps = {
     type: "info",
     message: "Toast message",
     duration: 6000,
   };
-  const [params, setParams] = React.useState<IToastProps>(placeholder);
+  const [params, setParams] = useState<IToastProps>(placeholder);
   const defaultDuring =
     params.type === "success" || params.type === "info" ? 3000 : 6000;
   const [mounted, setMounted] = useState(false);
@@ -145,6 +141,7 @@ Toast.notify = ({
   className,
 }: Pick<IToastProps, "type" | "message" | "duration" | "className">) => {
   const defaultDuring = type === "success" || type === "info" ? 3000 : 6000;
+
   if (typeof window === "object") {
     const holder = document.createElement("div");
     const root = createRoot(holder);
@@ -155,7 +152,7 @@ Toast.notify = ({
         message={message}
         duration={duration}
         className={className}
-      />,
+      />
     );
     document.body.appendChild(holder);
     setTimeout(() => {
