@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   Icon,
   IconButton,
   Popover,
@@ -8,7 +7,6 @@ import {
   PopoverBody,
   PopoverCloseButton,
   PopoverContent,
-  PopoverFooter,
   PopoverHeader,
   PopoverTrigger,
   Text,
@@ -19,16 +17,26 @@ import { LuHistory } from "react-icons/lu";
 import { MdBuild } from "react-icons/md";
 
 import ChatHistoryList from "@/components/Playground/ChatHistoryList";
+import CustomButton from "@/components/Common/CustomButton";
+import ApiKeyButton from "../Apikey/ApiKeyManageButton";
+
+interface DebugPreviewHeadProps {
+  teamId: number;
+  triggerSubmit: () => void;
+  useDeployButton: boolean;
+  useApiKeyButton: boolean;
+  isWorkflow?: boolean;
+  showHistoryButton?: boolean;
+}
 
 function DebugPreviewHead({
   teamId,
   triggerSubmit,
   useDeployButton,
-}: {
-  teamId: number;
-  triggerSubmit: () => void;
-  useDeployButton: boolean;
-}) {
+  useApiKeyButton,
+  isWorkflow = false,
+  showHistoryButton = false,
+}: DebugPreviewHeadProps) {
   const bgColor = useColorModeValue("ui.bgMain", "ui.bgMainDark");
   const buttonColor = useColorModeValue("ui.main", "ui.main");
   const { t } = useTranslation();
@@ -44,48 +52,39 @@ function DebugPreviewHead({
         {t("team.teamsetting.debugoverview")}
       </Text>
       <Box display={"flex"} flexDirection={"row"} mr="5" alignItems={"center"}>
-        <Popover preventOverflow={false} isLazy={true}>
-          <PopoverTrigger>
-            <IconButton
-              aria-label="history"
-              icon={<Icon as={LuHistory} h="6" w="6" color={buttonColor} />}
-              h="10"
-              w="10"
-              bg={bgColor}
-              as={"button"}
-            />
-          </PopoverTrigger>
-          <PopoverContent
-          // zIndex="9999"
-          >
-            <PopoverArrow />
-            <PopoverCloseButton />
-            <PopoverHeader> {t("team.teamsetting.chathistory")}</PopoverHeader>
-            <PopoverBody
-              maxH="50vh"
-              overflowY="auto"
-              //  zIndex="9999"
-            >
-              <Box
-              // zIndex="1001"
-              >
-                <ChatHistoryList teamId={teamId} isPlayground={false} />
-              </Box>
-            </PopoverBody>
-            <PopoverFooter />
-          </PopoverContent>
-        </Popover>
+        {(showHistoryButton || !isWorkflow) && (
+          <Popover preventOverflow={false} isLazy={true}>
+            <PopoverTrigger>
+              <IconButton
+                aria-label="history"
+                icon={<Icon as={LuHistory} h="6" w="6" color={buttonColor} />}
+                h="8"
+                w="8"
+                bg={bgColor}
+                as={"button"}
+                mr={isWorkflow ? "6" : "2"}
+              />
+            </PopoverTrigger>
+            <PopoverContent>
+              <PopoverArrow />
+              <PopoverCloseButton />
+              <PopoverHeader>{t("team.teamsetting.chathistory")}</PopoverHeader>
+              <PopoverBody maxH="50vh" overflowY="auto">
+                <Box>
+                  <ChatHistoryList teamId={teamId} isPlayground={false} />
+                </Box>
+              </PopoverBody>
+            </PopoverContent>
+          </Popover>
+        )}
+        {useApiKeyButton && <ApiKeyButton teamId={teamId.toString()} mr={2} />}
         {useDeployButton && (
-          <Button
-            ml={"5"}
-            bg={buttonColor}
-            borderRadius={"md"}
-            onClick={triggerSubmit}
-            _hover={{ backgroundColor: "#1c86ee" }}
+          <CustomButton
+            text={t("team.teamsetting.savedeploy")}
+            variant="blue"
             rightIcon={<MdBuild color={"white"} />}
-          >
-            <Text color={"white"}>{t("team.teamsetting.savedeploy")}</Text>
-          </Button>
+            onClick={triggerSubmit}
+          />
         )}
       </Box>
     </Box>

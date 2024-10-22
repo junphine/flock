@@ -16,6 +16,7 @@ export default function NormalTeamSettings({
   teamData: TeamOut;
 }) {
   const editMemberModal = useDisclosure();
+
   const { teamId } = useParams() as { teamId: string };
   const showToast = useCustomToast();
   const {
@@ -24,14 +25,13 @@ export default function NormalTeamSettings({
     isError,
     error,
   } = useQuery(`teams/${teamId}/members`, () =>
-    MembersService.readMembers({ teamId: Number.parseInt(teamId) }),
+    MembersService.readMembers({ teamId: Number.parseInt(teamId) })
   );
 
   const member = members?.data || [];
 
   if (isError) {
     const errDetail = (error as ApiError).body?.detail;
-
     showToast("Something went wrong.", `${errDetail}`, "error");
   }
   const formRef = useRef<HTMLFormElement>(null);
@@ -101,6 +101,7 @@ export default function NormalTeamSettings({
                 teamId={Number.parseInt(teamId)}
                 triggerSubmit={triggerSubmit}
                 useDeployButton={true}
+                useApiKeyButton={true}
               />
             </Box>
           </Box>

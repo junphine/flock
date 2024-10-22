@@ -94,14 +94,15 @@ function Team() {
                   maxH={"full"}
                   p="2"
                 >
-                  <Box w="80%" maxH={"full"} bg={"#f6f8fa"} mr="2">
+                  <Box w="75%" maxH={"full"} bg={"#f6f8fa"} mr="2">
                     <Flow />
                   </Box>
-                  <Box w="20%">
+                  <Box w="25%">
                     <DebugPreview
                       teamId={Number.parseInt(teamId)}
                       triggerSubmit={triggerSubmit}
                       useDeployButton={true}
+                      useApiKeyButton={true}
                     />
                   </Box>
                 </Box>
