@@ -7,6 +7,12 @@
   <a href="#how-to-get-started">始め方</a>
 </p>
 
+> [!TIP]
+>
+> ### 🎉 最新アップデート
+>
+> **CrewAI ノードのサポート**: ワークフローで CrewAI の強力なマルチエージェント機能を活用できるようになりました！洗練されたエージェントチームを作成し、複雑な協調タスクを簡単に編成できます。
+
 LangChain、LangGraph、およびその他のフレームワークに基づいたチャットボット、RAG、エージェント、およびマルチエージェントアプリケーションプロジェクトで、オープンソースであり、オフライン展開が可能です。
 <video src="https://private-user-images.githubusercontent.com/49232224/374006908-309ab01e-8a29-4764-b470-dbedea8d8622.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MjgyNjg4MzEsIm5iZiI6MTcyODI2ODUzMSwicGF0aCI6Ii80OTIzMjIyNC8zNzQwMDY5MDgtMzA5YWIwMWUtOGEyOS00NzY0LWI0NzAtZGJlZGVhOGQ4NjIyLm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNDEwMDclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjQxMDA3VDAyMzUzMVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTJiMGZiZjU3MGIyMWZkZDRkNjI3MmU5MzA1YTZhNmRlODVkZTcxYWI1MjYxMGM2ODU0NzM3OWVkN2MxNTk2MmEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.j-kXuux_wfe2bK2VW77TY53mTqj9iYn7kyuxwwwNQQw" data-canonical-src="https://private-user-images.githubusercontent.com/49232224/374006908-309ab01e-8a29-4764-b470-dbedea8d8622.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MjgyNjg4MzEsIm5iZiI6MTcyODI2ODUzMSwicGF0aCI6Ii80OTIzMjIyNC8zNzQwMDY5MDgtMzA5YWIwMWUtOGEyOS00NzY0LWI0NzAtZGJlZGVhOGQ4NjIyLm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNDEwMDclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjQxMDA3VDAyMzUzMVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTJiMGZiZjU3MGIyMWZkZDRkNjI3MmU5MzA1YTZhNmRlODVkZTcxYWI1MjYxMGM2ODU0NzM3OWVkN2MxNTk2MmEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.j-kXuux_wfe2bK2VW77TY53mTqj9iYn7kyuxwwwNQQw" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px">
 </video>
@@ -14,7 +20,9 @@ LangChain、LangGraph、およびその他のフレームワークに基づい�
 ![alt text](assets/login.jpg)
 
 ### 🤖️ 概要
+
 ![alt text](assets/image.png)
+
 #### ワークフロー
 
 ![image](https://github.com/user-attachments/assets/a4e33565-7acf-45d9-8e82-5a740cd88344)
@@ -22,18 +30,19 @@ LangChain、LangGraph、およびその他のフレームワークに基づい�
 
 ### ノードタイプと機能
 
-Flockのワークフローシステムは、様々なタイプのノードで構成されており、それぞれが特定の目的を果たします：
+Flock のワークフローシステムは、様々なタイプのノードで構成されており、それぞれが特定の目的を果たします：
 
 1. 入力ノード：初期入力を処理し、ワークフローが扱える形式に変換します。
-2. LLMノード：大規模言語モデルを利用してテキスト生成と処理を行います。
+2. LLM ノード：大規模言語モデルを利用してテキスト生成と処理を行います。
 3. 検索ノード：知識ベースから関連情報を取得します。
 4. ツールノード：特定のタスクや操作を実行し、ワークフローの機能を拡張します。
 5. 検索ツールノード：検索機能とツール機能を組み合わせます。
 6. 回答ノード：前のノードの結果を統合し、最終的な回答や出力を生成します。
-7. サブグラフノード：完全なサブワークフローをカプセル化し、モジュラー設計を可能にします。
+7. サブグラフノード：完全なサブワークフロ ��� をカプセル化し、モジュラー設計を可能にします。
 8. 開始と終了ノード：ワークフローの開始と終了を示します。
 
 将来計画されているノードには以下が含まれます：
+
 - 意図認識ノード
 - 条件分岐ノード（If-Else）
 - ファイルアップロードノード
@@ -63,6 +72,16 @@ Flock は、大規模言語モデル（LLM）アプリケーションを開発�
 
 プロジェクトの技術スタック：LangChain + LangGraph + React + Next.js + Chakra UI + PostgreSQL
 
+> [!NOTE]
+>
+> ### 🛠️ ツールシステム
+>
+> Flock には様々な組み込みツールが付属しており、カスタムツールの簡単な統合をサポートしています。利用可能なツールと独自のツールの追加方法については、[ツールガイド](Add_New_Tools_Guide.md)をご覧ください。
+
+> ### 🤖 モデルシステム
+>
+> Flock は様々なモデルプロバイダーをサポートしており、新しいプロバイダーの追加も容易です。サポートされているモデルと新しいプロバイダーの追加方法については、[モデルガイド](Add_New_Model_Providers_Guide.md)をご覧ください。
+
 ### 💡 ロードマップ
 
 1 アプリ
@@ -71,7 +90,8 @@ Flock は、大規模言語モデル（LLM）アプリケーションを開発�
 - [x] シンプル RAG
 - [x] 階層エージェント
 - [x] シーケンシャルエージェント
-- [ ] ワークフロー ---進行中
+- [x] ワークフロー
+- [ ] CrewAI 統合 ---進行中
 - [ ] さらに多くのマルチエージェント
 
 2 モデル
@@ -80,7 +100,7 @@ Flock は、大規模言語モデル（LLM）アプリケーションを開発�
 - [x] ZhipuAI
 - [x] Siliconflow
 - [x] Ollama
-- [ ] Qwen
+- [x] Qwen
 - [ ] Xinference
 
 3 その他
@@ -137,7 +157,7 @@ docker compose  --env-file ../.env up -d
 
 サーバーの起動には Python 3.10.x が必要です。Python 環境を迅速にインストールするには、pyenv を使用することをお勧めします。
 
-追加の Python バージョンをインストールするには、pyenv install を使用します。
+追加の Python ージョンをインストールするには、pyenv install を使用します。
 
 ```bash
 pyenv install 3.10
