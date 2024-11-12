@@ -14,6 +14,7 @@ import {
   ModalOverlay,
   Text,
   VStack,
+  Box,
 } from "@chakra-ui/react";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -27,7 +28,7 @@ interface KBInfo {
 }
 
 interface KBListProps {
-  uploads: any[]; // Replace 'any' with the correct type from useUploadsQuery
+  uploads: any[];
   onClose: () => void;
   onAddKB: (kb: KBInfo) => void;
   selectedKBs: string[];
@@ -48,12 +49,19 @@ const KBListModal: React.FC<KBListProps> = ({
   }, [uploads, searchQuery]);
 
   return (
-    <Modal isOpen={true} onClose={onClose}>
+    <Modal isOpen={true} onClose={onClose} size="md">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Add Knowledge Base</ModalHeader>
+        <ModalHeader>
+          <HStack spacing={2}>
+            <GiArchiveResearch size="20px" color="#4A5568" />
+            <Text fontSize="lg" fontWeight="600">
+              Add Knowledge Base
+            </Text>
+          </HStack>
+        </ModalHeader>
         <ModalCloseButton />
-        <ModalBody>
+        <ModalBody pb={6}>
           <VStack align="stretch" spacing={4}>
             <InputGroup>
               <InputLeftElement pointerEvents="none">
@@ -63,36 +71,92 @@ const KBListModal: React.FC<KBListProps> = ({
                 placeholder="Search knowledge bases..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                borderColor="gray.200"
+                _hover={{ borderColor: "gray.300" }}
+                _focus={{ borderColor: "blue.500", boxShadow: "none" }}
               />
             </InputGroup>
-            {filteredUploads.map((upload) => (
-              <HStack key={upload.id} justifyContent="space-between">
-                <HStack spacing={"2"}>
-                  <IconButton
-                    aria-label="db"
-                    icon={<GiArchiveResearch size={"16px"} />}
-                    colorScheme={"pink"}
-                    size="xs"
-                  />
-
-                  <Text>{upload.name}</Text>
-                </HStack>
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    onAddKB({
-                      name: upload.name,
-                      description: upload.description,
-                      usr_id: upload.owner_id,
-                      kb_id: upload.id,
-                    })
-                  }
-                  isDisabled={selectedKBs.includes(upload.name)}
+            <VStack 
+              align="stretch" 
+              spacing={2} 
+              maxH="400px" 
+              overflowY="auto"
+              sx={{
+                '&::-webkit-scrollbar': {
+                  width: '4px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  width: '6px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'gray.200',
+                  borderRadius: '24px',
+                },
+              }}
+            >
+              {filteredUploads.map((upload) => (
+                <Box
+                  key={upload.id}
+                  p={2}
+                  borderRadius="md"
+                  bg="gray.50"
+                  borderLeft="3px solid"
+                  borderLeftColor="pink.400"
+                  transition="all 0.2s"
+                  _hover={{ 
+                    bg: "gray.100",
+                    borderLeftColor: "pink.500",
+                  }}
                 >
-                  {selectedKBs.includes(upload.name) ? "Added" : "Add"}
-                </Button>
-              </HStack>
-            ))}
+                  <HStack justify="space-between">
+                    <HStack spacing={2}>
+                      <IconButton
+                        aria-label="db"
+                        icon={<GiArchiveResearch size="16px" />}
+                        colorScheme="pink"
+                        size="xs"
+                        variant="ghost"
+                      />
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm" fontWeight="500">
+                          {upload.name}
+                        </Text>
+                        <Text fontSize="xs" color="gray.500" noOfLines={2}>
+                          {upload.description || "No description"}
+                        </Text>
+                      </VStack>
+                    </HStack>
+                    <Button
+                      size="sm"
+                      colorScheme="blue"
+                      variant="ghost"
+                      onClick={() =>
+                        onAddKB({
+                          name: upload.name,
+                          description: upload.description,
+                          usr_id: upload.owner_id,
+                          kb_id: upload.id,
+                        })
+                      }
+                      isDisabled={selectedKBs.includes(upload.name)}
+                    >
+                      {selectedKBs.includes(upload.name) ? (
+                        <Text fontSize="sm" color="gray.500">
+                          Added
+                        </Text>
+                      ) : (
+                        "Add"
+                      )}
+                    </Button>
+                  </HStack>
+                </Box>
+              ))}
+              {filteredUploads.length === 0 && (
+                <Box p={4} textAlign="center">
+                  <Text color="gray.500">No knowledge bases found</Text>
+                </Box>
+              )}
+            </VStack>
           </VStack>
         </ModalBody>
       </ModalContent>

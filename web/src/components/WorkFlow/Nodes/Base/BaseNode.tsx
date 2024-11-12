@@ -33,7 +33,6 @@ export const BaseNode: React.FC<BaseNodeProps> = ({
         size="xs"
       />
       <Text fontWeight="bold" fontSize="xs">
-        {/* {id} */}
         {data.label}
       </Text>
     </HStack>
