@@ -23,6 +23,7 @@ from .node.retrieval_node import RetrievalNode
 from .node.state import TeamState
 from .node.subgraph_node import SubgraphNode
 from .node.crewai_node import CrewAINode
+from .node.classifier_node import ClassifierNode
 
 
 def create_subgraph(subgraph_config: Dict[str, Any]) -> CompiledGraph:
@@ -98,6 +99,56 @@ def should_continue(state: TeamState) -> str:
     return "default"
 
 
+def should_continue_classifier(state: TeamState) -> str:
+    """专门处理分类器节点的条件判断"""
+    if "node_outputs" in state:
+        for node_id, outputs in state["node_outputs"].items():
+            if "category_id" in outputs:
+                return outputs["category_id"]
+    return "default"
+
+
+def _add_classifier_conditional_edges(
+    graph_builder, classifier_node_id: str, nodes: list, edges: list
+):
+    """专门处理分类器节点的条件边"""
+    # 获取分类器节点的配置
+    classifier_node = next(
+        (node for node in nodes if node["id"] == classifier_node_id), None
+    )
+    if not classifier_node:
+        return
+
+    # 构建分类器的条件边字典
+    edges_dict = {}
+
+    # 获取所有从分类器出发的边
+    classifier_edges = [edge for edge in edges if edge["source"] == classifier_node_id]
+
+    # 为每个分类类别创建条件边
+    for edge in classifier_edges:
+        target_node = next(
+            (node for node in nodes if node["id"] == edge["target"]), None
+        )
+        if target_node:
+            # 检查边的sourceHandle是否匹配任何category_id
+            source_handle = edge.get("sourceHandle")
+            if source_handle:  # 如果有sourceHandle，使用它作为路由键
+                edges_dict[source_handle] = edge["target"]
+
+    # 添加默认路径
+    default_edge = next(
+        (edge for edge in classifier_edges if edge.get("type") == "default"), None
+    )
+    edges_dict["default"] = default_edge["target"] if default_edge else END
+
+    # 添加条件边到图中
+    if edges_dict:
+        graph_builder.add_conditional_edges(
+            classifier_node_id, should_continue_classifier, edges_dict
+        )
+
+
 def initialize_graph(
     build_config: Dict[str, Any],
     checkpointer: BaseCheckpointSaver,
@@ -153,13 +204,25 @@ def initialize_graph(
                 )
             elif node_type in ["tool", "toolretrieval"]:
                 _add_tool_node(graph_builder, node_id, node_type, node_data)
+            elif node_type == "classifier":
+                _add_classifier_node(graph_builder, node_id, node_data)
 
         # Add edges
         for edge in edges:
             _add_edge(graph_builder, edge, nodes, conditional_edges)
 
         # Add conditional edges
-        _add_conditional_edges(graph_builder, conditional_edges)
+        _add_conditional_edges(graph_builder, conditional_edges, nodes)
+
+        # 添加分类器节点的条件边
+        classifier_nodes = [
+            node["id"] for node in nodes if node["type"] == "classifier"
+        ]
+
+        for classifier_node_id in classifier_nodes:
+            _add_classifier_conditional_edges(
+                graph_builder, classifier_node_id, nodes, edges
+            )
 
         # Set entry point and compile graph
         graph_builder.set_entry_point("InputNode")
@@ -176,6 +239,7 @@ def initialize_graph(
 
         # save graph image
         if save_graph_img:
+            # if True:
             try:
                 img_data = graph.get_graph().draw_mermaid_png()
                 with open(f"save_graph_{time.time()}.png", "wb") as f:
@@ -406,18 +470,26 @@ def _add_edge(graph_builder, edge, nodes, conditional_edges):
         graph_builder.add_edge(edge["source"], edge["target"])
     elif target_node["type"] == "subgraph":
         graph_builder.add_edge(edge["source"], edge["target"])
+    # elif source_node["type"] == "classifier":   #   classifier  必定是conditional_edges  不会有普通边
+    #     if target_node["type"] == "end":
+    #         graph_builder.add_edge(edge["source"], END)
+    #     if edge["type"] == "default":
+    #         graph_builder.add_edge(edge["source"], edge["target"])
 
 
-def _add_conditional_edges(graph_builder, conditional_edges):
-    for llm_id, conditions in conditional_edges.items():
+def _add_conditional_edges(graph_builder, conditional_edges, nodes):
+    """Add conditional edges to graph"""
+    for node_id, conditions in conditional_edges.items():
         edges_dict = {
             "default": next(iter(conditions["default"].values()), END),
             **conditions["call_tools"],
         }
+
         if conditions["call_human"]:
             edges_dict["call_human"] = next(iter(conditions["call_human"].values()))
+
         if edges_dict != {"default": END}:
-            graph_builder.add_conditional_edges(llm_id, should_continue, edges_dict)
+            graph_builder.add_conditional_edges(node_id, should_continue, edges_dict)
 
 
 def _add_crewai_node(graph_builder, node_id, node_type, node_data):
@@ -483,3 +555,22 @@ def get_model_info(model_name: str) -> Dict[str, str]:
                 "api_key": model.provider.api_key,
             }
     raise ValueError(f"Model {model_name} not supported now.")
+
+
+def _add_classifier_node(graph_builder, node_id, node_data):
+    """Add classifier node to graph"""
+    # 获取模型信息
+    model_info = get_model_info(node_data["model"])
+
+    graph_builder.add_node(
+        node_id,
+        ClassifierNode(
+            node_id=node_id,
+            provider=model_info["provider_name"],
+            model=model_info["ai_model_name"],
+            categories=node_data["categories"],
+            input=node_data.get("input", ""),
+            openai_api_key=model_info["api_key"],
+            openai_api_base=model_info["base_url"],
+        ).work,
+    )

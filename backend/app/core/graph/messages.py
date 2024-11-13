@@ -186,4 +186,19 @@ def event_to_response(event: StreamEvent) -> ChatResponse | None:
                     name=name,
                     content=output.content,
                 )
+        if (
+            name
+            and name.startswith("classifier")
+            and isinstance(output, dict)
+            and "node_outputs" in output
+        ):
+            for _, outputs in output["node_outputs"].items():
+                if "category_name" in outputs:
+                    return ChatResponse(
+                        type="ai",
+                        id=id,
+                        name=name,
+                        content=outputs["category_name"],
+                    )
+
     return None

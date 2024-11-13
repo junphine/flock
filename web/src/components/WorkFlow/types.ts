@@ -57,3 +57,13 @@ export interface FlowVisualizerProps {
   defaultEdgeOptions?: DefaultEdgeOptions;
   teamId: number;
 }
+
+export interface ClassifierCategory {
+  category_id: string;
+  category_name: string;
+}
+
+export interface ClassifierNodeData extends NodeData {
+  categories: ClassifierCategory[];
+  model?: string;
+}
