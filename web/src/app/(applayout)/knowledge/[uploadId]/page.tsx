@@ -243,7 +243,7 @@ function KnowledgeTest() {
                   {t("knowledge.test.results.title")}
                 </Text>
                 <SimpleGrid columns={{ base: 2, md: 2 }} spacing={4}>
-                  {searchResults.results.map((result: any, index: number) => (
+                  {searchResults?.results?.map((result: any, index: number) => (
                     <Box
                       key={index}
                       p={4}
@@ -282,17 +282,7 @@ function KnowledgeTest() {
                       >
                         {result.content}
                       </Text>
-                      {result.content.split("\n").length > 6 && (
-                        <Text
-                          position="absolute"
-                          bottom={2}
-                          right={2}
-                          color="blue.500"
-                          fontWeight="bold"
-                        >
-                          ...
-                        </Text>
-                      )}
+                   
                     </Box>
                   ))}
                 </SimpleGrid>
