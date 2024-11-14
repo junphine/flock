@@ -12,38 +12,49 @@ const ClassifierNode: React.FC<NodeProps<ClassifierNodeData>> = (props) => {
   const { icon: Icon, colorScheme } = nodeConfig.classifier;
   const { categories } = props.data;
 
+  const handleStyle = {
+    background: "var(--chakra-colors-ui-wfhandlecolor)",
+    width: 8,
+    height: 8,
+    border: "2px solid white",
+    transition: "all 0.2s",
+  };
+
   return (
     <BaseNode {...props} icon={<Icon />} colorScheme={colorScheme}>
       <Handle
         type="target"
         position={Position.Left}
         id="input"
-        style={{ left: -8 }}
+        style={handleStyle}
       />
-      
+
       <VStack spacing={1} align="stretch">
         {categories.map((category, index) => (
           <Box
             key={category.category_id}
             position="relative"
-            bg="#f2f4f7"
+            bg="ui.inputbgcolor"
             p={1}
             borderRadius="md"
+            transition="all 0.2s"
+            _hover={{
+              bg: "gray.100",
+            }}
           >
             <Text fontSize="xs" fontWeight="500">
-              {category.category_name || `${t("workflow.nodes.classifier.category")} ${index + 1}`}
+              {category.category_name ||
+                `${t("workflow.nodes.classifier.category")} ${index + 1}`}
             </Text>
             <Handle
               type="source"
               position={Position.Right}
               id={category.category_id}
               style={{
+                ...handleStyle,
                 right: -8,
                 top: "50%",
                 transform: "translateY(-50%)",
-                background: "#555",
-                width: 8,
-                height: 8,
               }}
             />
           </Box>

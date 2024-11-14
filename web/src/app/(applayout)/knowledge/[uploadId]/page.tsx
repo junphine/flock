@@ -4,7 +4,6 @@ import {
   VStack,
   HStack,
   Text,
-  useColorModeValue,
   Textarea,
   Spinner,
   SimpleGrid,
@@ -19,10 +18,14 @@ import {
   BreadcrumbLink,
   Progress,
   Icon,
+  Flex,
+  Heading,
+  useColorModeValue,
+  CloseButton,
 } from "@chakra-ui/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { AiOutlineFileSearch } from "react-icons/ai";
 import { FaVectorSquare, FaMix } from "react-icons/fa6";
 import { GiArrowScope } from "react-icons/gi";
@@ -31,9 +34,13 @@ import { VscTriangleRight } from "react-icons/vsc";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import { useTranslation } from "react-i18next";
 
+import { FiFileText } from "react-icons/fi";
+import { ChevronRightIcon } from "@chakra-ui/icons";
+
 import { UploadsService, type ApiError } from "@/client";
 import CustomButton from "@/components/Common/CustomButton";
 import useCustomToast from "@/hooks/useCustomToast";
+
 const SearchTypeInfo = [
   {
     type: "vector",
@@ -52,7 +59,7 @@ const SearchTypeInfo = [
     type: "hybrid",
     displayName: "混合检索",
     description:
-      "同时执行全文检索和向量检索，并应用重排序步骤，从两类查询结果中选择匹配用户问题的最佳结果，用户可以选择设置权重或配置重新排序模型。",
+      "同时执行全文检索和向量检索，并应用重排序步骤，从两类查询结果中选择匹配用户问题的最佳结果。",
     icon: FaMix,
   },
 ];
@@ -68,9 +75,6 @@ function KnowledgeTest() {
   const [searchTaskId, setSearchTaskId] = useState<string | null>(null);
   const [isOptionsVisible, setIsOptionsVisible] = useState(false);
   const { t } = useTranslation();
-
-  const bgColor = useColorModeValue("white", "gray.800");
-  const borderColor = useColorModeValue("gray.200", "gray.600");
 
   const {
     data: upload,
@@ -147,249 +151,388 @@ function KnowledgeTest() {
     setIsOptionsVisible(false);
   };
 
-  if (isLoading) {
-    return <Box>Loading...</Box>;
-  }
+  const breadcrumbBg = useColorModeValue("ui.inputbgcolor", "gray.700");
 
-  if (isError) {
-    return <Box>Error: {(error as ApiError).body?.detail}</Box>;
+  if (isLoading) {
+    return (
+      <Flex
+        justify="center"
+        align="center"
+        height="100vh"
+        width="full"
+        bg="ui.bgMain"
+      >
+        <Spinner size="xl" color="ui.main" thickness="3px" speed="0.8s" />
+      </Flex>
+    );
   }
 
   const currentUpload = upload?.data.find((u) => u.id === Number(uploadId));
 
   return (
-    <>
-      <Box py="3" pl="4" bg={"#f2f4f7"}>
-        <Breadcrumb>
+    <Box
+      display="flex"
+      h="full"
+      maxH="full"
+      flexDirection="column"
+      overflow="hidden"
+      bg="ui.bgMain"
+    >
+      <Box
+        py={4}
+        px={6}
+        bg={breadcrumbBg}
+        borderBottom="1px solid"
+        borderColor="gray.100"
+        backdropFilter="blur(10px)"
+        transition="all 0.2s"
+        position="relative"
+        zIndex={1}
+        _after={{
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backdropFilter: "blur(8px)",
+          zIndex: -1,
+        }}
+      >
+        <Breadcrumb
+          spacing="8px"
+          separator={
+            <ChevronRightIcon
+              color="gray.400"
+              fontSize="sm"
+              transition="all 0.2s"
+            />
+          }
+        >
           <BreadcrumbItem>
             <Link href="/knowledge">
-              <BreadcrumbLink>Knowledge</BreadcrumbLink>
+              <BreadcrumbLink
+                display="flex"
+                alignItems="center"
+                color="gray.600"
+                fontSize="sm"
+                fontWeight="500"
+                transition="all 0.2s"
+                _hover={{
+                  color: "ui.main",
+                  textDecoration: "none",
+                  transform: "translateY(-1px)",
+                }}
+              >
+                <FiFileText style={{ marginRight: "6px" }} />
+                Knowledge
+              </BreadcrumbLink>
             </Link>
           </BreadcrumbItem>
           <BreadcrumbItem isCurrentPage>
-            <BreadcrumbLink fontWeight={"bold"}>
-              {currentUpload?.name}
-            </BreadcrumbLink>
+            <Link href="#">
+              <BreadcrumbLink
+                fontSize="sm"
+                fontWeight="600"
+                color="gray.800"
+                transition="all 0.2s"
+                _hover={{
+                  color: "ui.main",
+                  textDecoration: "none",
+                }}
+                display="flex"
+                alignItems="center"
+                bg="white"
+                px={3}
+                py={1}
+                borderRadius="full"
+                boxShadow="sm"
+              >
+                {currentUpload?.name}
+              </BreadcrumbLink>
+            </Link>
           </BreadcrumbItem>
         </Breadcrumb>
       </Box>
-      <Box px={8}>
-        <Text fontSize={"lg"} fontWeight={"bold"}>
-          {t("knowledge.test.title")}
-        </Text>
-        <Text mt={2} mb={2}>
-          {t("knowledge.test.description")}
-        </Text>
-        <HStack spacing={6} align="flex-start">
-          <Box
-            position="relative"
-            flex={1}
-            border={"1px solid"}
-            borderColor={"gray.200"}
-            borderRadius={"lg"}
-          >
-            <HStack
-              borderRadius="md"
-              border={"1px solid"}
-              borderColor={"gray.200"}
-              justifyContent={"space-between"}
-              bg="#eef4ff"
-            >
-              <Text my={2} ml={3} fontWeight={"bold"}>
-                {t("knowledge.test.knowledgeBase")}: {currentUpload?.name}
-              </Text>
-              <CustomButton
-                text={
-                  SearchTypeInfo.find((info) => info.type === searchType)
-                    ?.displayName || t("knowledge.test.actions.selectType")
-                }
-                variant="white"
-                my={2}
-                mr={3}
-                zIndex={2}
-                onClick={() => setIsOptionsVisible(!isOptionsVisible)}
-                rightIcon={<VscTriangleRight color="#155aef" size="12px" />}
-              />
-            </HStack>
-            <Textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={
-                t("knowledge.test.searchType.placeholder") || "Enter input"
-              }
-              size="lg"
-              px={"6"}
-              pt={"6"}
-              h="500px"
-              bg="white"
-            />
-            <CustomButton
-              text={t("knowledge.test.actions.search")}
-              variant="blue"
-              position="absolute"
-              bottom={2}
-              right={2}
-              zIndex={2}
-              onClick={handleSearch}
-              rightIcon={<MdBuild color="white" size="12px" />}
-            />
+
+      <Box flex={1} p={6} overflow="auto">
+        <VStack spacing={6} align="stretch">
+          <Box>
+            <Heading size="md" color="gray.800" mb={2}>
+              {t("knowledge.test.title")}
+            </Heading>
+            <Text color="gray.600" fontSize="sm">
+              {t("knowledge.test.description")}
+            </Text>
           </Box>
 
-          <Box bg={"transparent"} px={6} pt={4} flex={1} minH="500px">
-            {searchResults?.status === "pending" && <Spinner />}
-            {searchResults?.results && (
-              <>
-                <Text mb={2} fontSize={"lg"} fontWeight={"bold"}>
-                  {t("knowledge.test.results.title")}
+          <HStack spacing={6} align="flex-start">
+            <Box
+              position="relative"
+              flex={1}
+              bg="white"
+              borderRadius="xl"
+              border="1px solid"
+              borderColor="gray.100"
+              boxShadow="sm"
+              transition="all 0.2s"
+              _hover={{
+                boxShadow: "md",
+                borderColor: "gray.200",
+              }}
+            >
+              <HStack
+                p={4}
+                borderBottom="1px solid"
+                borderColor="gray.100"
+                bg="ui.inputbgcolor"
+                borderTopRadius="xl"
+                spacing={4}
+              >
+                <Text fontWeight="600" color="gray.700" fontSize="sm">
+                  {t("knowledge.test.knowledgeBase")}: {currentUpload?.name}
                 </Text>
-                <SimpleGrid columns={{ base: 2, md: 2 }} spacing={4}>
-                  {searchResults?.results?.map((result: any, index: number) => (
-                    <Box
-                      key={index}
-                      p={4}
-                      borderWidth={1}
-                      borderRadius="md"
-                      bg="white"
-                      height="200px"
-                      overflow="hidden"
-                      position="relative"
-                    >
-                      <HStack justifyContent="space-between" mb={2}>
-                        <Text fontWeight="bold">
-                          {t("knowledge.test.results.score")}:{" "}
-                          {result.score.toFixed(2)}
-                        </Text>
-                        <Box
-                          display={"flex"}
-                          flexDirection={"row"}
-                          width="70%"
-                          alignItems={"center"}
-                        >
-                          <Icon as={GiArrowScope} w={5} h={5} color="#3182ce" />
+                <CustomButton
+                  text={
+                    SearchTypeInfo.find((info) => info.type === searchType)
+                      ?.displayName || t("knowledge.test.actions.selectType")
+                  }
+                  variant="white"
+                  onClick={() => setIsOptionsVisible(!isOptionsVisible)}
+                  rightIcon={<VscTriangleRight />}
+                  ml="auto"
+                />
+              </HStack>
+
+              <Textarea
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("knowledge.test.searchType.placeholder")!}
+                size="lg"
+                p={4}
+                minH="400px"
+                border="none"
+                _focus={{
+                  boxShadow: "none",
+                  borderColor: "ui.main",
+                }}
+                resize="none"
+                fontSize="sm"
+                transition="all 0.2s"
+              />
+
+              <Box position="absolute" bottom={4} right={4}>
+                <CustomButton
+                  text={t("knowledge.test.actions.search")}
+                  variant="blue"
+                  onClick={handleSearch}
+                  rightIcon={<MdBuild />}
+                  isLoading={searchMutation.isLoading}
+                />
+              </Box>
+            </Box>
+
+            <Box flex={1} minH="500px">
+              {searchResults?.status === "pending" && (
+                <Flex justify="center" align="center" h="full">
+                  <Spinner
+                    size="xl"
+                    color="ui.main"
+                    thickness="3px"
+                    speed="0.8s"
+                  />
+                </Flex>
+              )}
+
+              {searchResults?.results && (
+                <VStack spacing={4} align="stretch">
+                  <Text fontSize="lg" fontWeight="600" color="gray.800">
+                    {t("knowledge.test.results.title")}
+                  </Text>
+                  <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+                    {searchResults.results.map((result: any, index: number) => (
+                      <Box
+                        key={index}
+                        p={4}
+                        bg="white"
+                        borderRadius="xl"
+                        border="1px solid"
+                        borderColor="gray.100"
+                        transition="all 0.2s"
+                        _hover={{
+                          transform: "translateY(-2px)",
+                          boxShadow: "md",
+                          borderColor: "gray.200",
+                        }}
+                      >
+                        <HStack mb={3} justify="space-between">
+                          <HStack>
+                            <Icon
+                              as={GiArrowScope}
+                              color="ui.main"
+                              boxSize={5}
+                            />
+                            <Text
+                              fontWeight="500"
+                              color="gray.700"
+                              fontSize="sm"
+                            >
+                              Score: {result.score.toFixed(2)}
+                            </Text>
+                          </HStack>
                           <Progress
                             value={result.score * 100}
-                            width={"80%"}
-                            size={"sm"}
+                            size="sm"
                             colorScheme="blue"
-                            ml={"3"}
+                            borderRadius="full"
+                            width="60%"
                           />
-                        </Box>
-                      </HStack>
-                      <Text
-                        noOfLines={6}
-                        overflow="hidden"
-                        textOverflow="ellipsis"
-                      >
-                        {result.content}
-                      </Text>
-                   
-                    </Box>
-                  ))}
-                </SimpleGrid>
-              </>
-            )}
-          </Box>
-
-          {/* 搜索选项面板 */}
-          {isOptionsVisible && (
-            <Box
-              position="absolute"
-              right="0"
-              top="0"
-              bg={bgColor}
-              p={4}
-              borderRadius="md"
-              borderWidth={1}
-              borderColor={borderColor}
-              boxShadow="md"
-              h="full"
-              w="600px"
-            >
-              <VStack spacing={4} align="stretch">
-                <HStack justifyContent="space-between">
-                  <Text fontWeight="bold">
-                    {t("knowledge.test.settings.title")}
-                  </Text>
-                  <CustomButton
-                    text="X"
-                    variant="white"
-                    size="sm"
-                    onClick={() => setIsOptionsVisible(false)}
-                  />
-                </HStack>
-
-                <RadioGroup onChange={setSearchType} value={searchType}>
-                  {SearchTypeInfo.map((info) => (
-                    <HStack
-                      key={info.type}
-                      justifyContent="space-between"
-                      alignItems="center"
-                      mt={2}
-                      border={"1px solid"}
-                      borderColor={"gray.200"}
-                      borderRadius={"md"}
-                      p={2}
-                    >
-                      <HStack spacing={4} flex={1}>
-                        <Box as={info.icon} size="24px" color="blue.500" />
-                        <VStack align="start" spacing={0}>
-                          <Text>
-                            {t(`knowledge.test.searchType.${info.type}.name`)}
-                          </Text>
-                          <Text fontSize="sm" color="gray.400">
-                            {t(
-                              `knowledge.test.searchType.${info.type}.description`
-                            )}
-                          </Text>
-                        </VStack>
-                      </HStack>
-                      <Radio value={info.type} />
-                    </HStack>
-                  ))}
-                </RadioGroup>
-                <HStack
-                  border={"1px solid"}
-                  borderColor={"gray.200"}
-                  borderRadius={"md"}
-                  p={2}
-                >
-                  <Box w="50%" mx="1">
-                    <Text>Top K: {topK}</Text>
-                    <Slider
-                      value={topK}
-                      min={1}
-                      max={10}
-                      step={1}
-                      onChange={(val) => setTopK(val)}
-                    >
-                      <SliderTrack>
-                        <SliderFilledTrack />
-                      </SliderTrack>
-                      <SliderThumb />
-                    </Slider>
-                  </Box>
-                  <Box w="50%" mx="1">
-                    <Text>Score Threshold: {scoreThreshold.toFixed(1)}</Text>
-                    <Slider
-                      value={scoreThreshold}
-                      min={0.1}
-                      max={1}
-                      step={0.1}
-                      onChange={(val) => setScoreThreshold(val)}
-                    >
-                      <SliderTrack>
-                        <SliderFilledTrack />
-                      </SliderTrack>
-                      <SliderThumb />
-                    </Slider>
-                  </Box>
-                </HStack>
-              </VStack>
+                        </HStack>
+                        <Text
+                          color="gray.600"
+                          fontSize="sm"
+                          noOfLines={6}
+                          lineHeight="tall"
+                        >
+                          {result.content}
+                        </Text>
+                      </Box>
+                    ))}
+                  </SimpleGrid>
+                </VStack>
+              )}
             </Box>
-          )}
-        </HStack>
+
+            {isOptionsVisible && (
+              <Box
+                position="fixed"
+                right={0}
+                top={0}
+                h="100vh"
+                w="500px"
+                bg="white"
+                p={6}
+                borderLeft="1px solid"
+                borderColor="gray.100"
+                boxShadow="lg"
+                overflowY="auto"
+                zIndex={10}
+                transform={
+                  isOptionsVisible ? "translateX(0)" : "translateX(100%)"
+                }
+                transition="all 0.3s ease-in-out"
+              >
+                <VStack spacing={4} align="stretch">
+                  <HStack justifyContent="space-between">
+                    <Text fontSize="lg" fontWeight="600" color="gray.800">
+                      {t("knowledge.test.settings.title")}
+                    </Text>
+                    <CloseButton
+                      onClick={() => setIsOptionsVisible(false)}
+                      position="absolute"
+                      right={4}
+                      top={4}
+                      size="md"
+                      borderRadius="full"
+                      transition="all 0.2s"
+                      _hover={{
+                        bg: "gray.100",
+                        transform: "rotate(90deg)",
+                      }}
+                    />
+                  </HStack>
+
+                  <RadioGroup onChange={setSearchType} value={searchType}>
+                    <VStack spacing={3} align="stretch">
+                      {SearchTypeInfo.map((info) => (
+                        <Box
+                          key={info.type}
+                          p={3}
+                          border="1px solid"
+                          borderColor="gray.200"
+                          borderRadius="lg"
+                          transition="all 0.2s"
+                          _hover={{ bg: "gray.50" }}
+                        >
+                          <HStack justify="space-between">
+                            <HStack spacing={4}>
+                              <Box
+                                p={2}
+                                borderRadius="md"
+                                bg="blue.50"
+                                color="blue.500"
+                              >
+                                <Icon as={info.icon} boxSize="5" />
+                              </Box>
+                              <VStack align="start" spacing={1}>
+                                <Text fontWeight="500" color="gray.700">
+                                  {info.displayName}
+                                </Text>
+                                <Text fontSize="sm" color="gray.500">
+                                  {info.description}
+                                </Text>
+                              </VStack>
+                            </HStack>
+                            <Radio value={info.type} colorScheme="blue" />
+                          </HStack>
+                        </Box>
+                      ))}
+                    </VStack>
+                  </RadioGroup>
+
+                  <Box
+                    p={4}
+                    border="1px solid"
+                    borderColor="gray.200"
+                    borderRadius="lg"
+                  >
+                    <VStack spacing={4} align="stretch">
+                      <Box>
+                        <Text mb={2} fontWeight="500" color="gray.700">
+                          Top K: {topK}
+                        </Text>
+                        <Slider
+                          value={topK}
+                          min={1}
+                          max={10}
+                          step={1}
+                          onChange={setTopK}
+                          colorScheme="blue"
+                        >
+                          <SliderTrack>
+                            <SliderFilledTrack />
+                          </SliderTrack>
+                          <SliderThumb boxSize={4} />
+                        </Slider>
+                      </Box>
+
+                      <Box>
+                        <Text mb={2} fontWeight="500" color="gray.700">
+                          Score Threshold: {scoreThreshold.toFixed(1)}
+                        </Text>
+                        <Slider
+                          value={scoreThreshold}
+                          min={0.1}
+                          max={1}
+                          step={0.1}
+                          onChange={setScoreThreshold}
+                          colorScheme="blue"
+                        >
+                          <SliderTrack>
+                            <SliderFilledTrack />
+                          </SliderTrack>
+                          <SliderThumb boxSize={4} />
+                        </Slider>
+                      </Box>
+                    </VStack>
+                  </Box>
+                </VStack>
+              </Box>
+            )}
+          </HStack>
+        </VStack>
       </Box>
-    </>
+    </Box>
   );
 }
 

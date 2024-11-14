@@ -1,9 +1,4 @@
-import {
-  Box,
-  Text,
-  VStack,
-  Select,
-} from "@chakra-ui/react";
+import { Box, Text, VStack, Select } from "@chakra-ui/react";
 import type React from "react";
 import { useCallback, useState, useEffect } from "react";
 
@@ -96,11 +91,29 @@ const RetrievalProperties: React.FC<RetrievalPropertiesProps> = ({
         handleKeyDown={handleKeyDown}
         insertVariable={insertVariable}
         availableVariables={availableVariables}
+        minHeight="80px"
       />
 
       <Box>
-        <Text fontWeight="bold">RAG Method:</Text>
-        <Select value={ragMethod} onChange={handleRagMethodChange}>
+        <Text fontWeight="500" fontSize="sm" color="gray.700" mb={2}>
+          RAG Method:
+        </Text>
+        <Select
+          value={ragMethod}
+          onChange={handleRagMethodChange}
+          size="sm"
+          bg="ui.inputbgcolor"
+          borderRadius="lg"
+          borderColor="gray.200"
+          _hover={{
+            borderColor: "teal.200",
+          }}
+          _focus={{
+            borderColor: "teal.500",
+            boxShadow: "0 0 0 1px var(--chakra-colors-teal-500)",
+          }}
+          transition="all 0.2s"
+        >
           <option value="Adaptive_RAG">Adaptive RAG</option>
           <option value="Agentic_RAG">Agentic RAG</option>
           <option value="Corrective_RAG">Corrective RAG</option>
@@ -109,11 +122,25 @@ const RetrievalProperties: React.FC<RetrievalPropertiesProps> = ({
       </Box>
 
       <Box>
-        <Text fontWeight="bold">Knowledge Database:</Text>
+        <Text fontWeight="500" fontSize="sm" color="gray.700" mb={2}>
+          Knowledge Database:
+        </Text>
         <Select
           placeholder="Select Knowledge Database"
           onChange={handleDatabaseChange}
           value={selectedDatabase || ""}
+          size="sm"
+          bg="ui.inputbgcolor"
+          borderRadius="lg"
+          borderColor="gray.200"
+          _hover={{
+            borderColor: "teal.200",
+          }}
+          _focus={{
+            borderColor: "teal.500",
+            boxShadow: "0 0 0 1px var(--chakra-colors-teal-500)",
+          }}
+          transition="all 0.2s"
         >
           {uploads?.data.map((upload) => (
             <option key={upload.id} value={upload.name}>
