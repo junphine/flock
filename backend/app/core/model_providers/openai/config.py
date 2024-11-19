@@ -18,27 +18,12 @@ SUPPORTED_MODELS = [
         "capabilities": [],
     },
     {
-        "name": "gpt-4-0314",
-        "categories": [ModelCategory.LLM, ModelCategory.CHAT],
-        "capabilities": [],
-    },
-    {
         "name": "gpt-4-32k",
         "categories": [ModelCategory.LLM, ModelCategory.CHAT],
         "capabilities": [],
     },
     {
-        "name": "gpt-4-32k-0314",
-        "categories": [ModelCategory.LLM, ModelCategory.CHAT],
-        "capabilities": [],
-    },
-    {
         "name": "gpt-3.5-turbo",
-        "categories": [ModelCategory.LLM, ModelCategory.CHAT],
-        "capabilities": [],
-    },
-    {
-        "name": "gpt-3.5-turbo-16k",
         "categories": [ModelCategory.LLM, ModelCategory.CHAT],
         "capabilities": [],
     },

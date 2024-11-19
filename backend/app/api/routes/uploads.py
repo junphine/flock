@@ -81,7 +81,7 @@ def move_upload_to_shared_folder(filename: str, temp_file_dir: str) -> str:
         str: The new file path in the shared folder.
     """
     file_name = f"{uuid.uuid4()}-{filename}"
-    file_path = f"./app/{file_name}"
+    file_path = f"./uploads/{file_name}"
     shutil.move(temp_file_dir, file_path)
     os.chmod(file_path, 0o775)
     return file_path
@@ -223,7 +223,7 @@ async def create_upload(
 
 async def save_upload_file(file: UploadFile) -> str:
     file_name = f"{uuid.uuid4()}-{file.filename}"
-    file_path = f"./app/{file_name}"
+    file_path = f"./uploads/{file_name}"
 
     async with aiofiles.open(file_path, "wb") as out_file:
         content = await file.read()
@@ -296,6 +296,7 @@ def update_upload(
             "text/plain",
             "text/html",
             "text/markdown",
+            "application/octet-stream"
         ]:
             raise HTTPException(status_code=400, detail="Invalid file type")
 

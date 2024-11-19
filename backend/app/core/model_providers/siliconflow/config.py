@@ -71,8 +71,8 @@ def init_model(
         return ChatOpenAI(
             model=model,
             temperature=temperature,
-            openai_api_key=openai_api_key,
-            openai_api_base=openai_api_base,
+            api_key=openai_api_key,
+            base_url=openai_api_base,
             **kwargs,
         )
     else:

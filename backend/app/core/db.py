@@ -135,8 +135,10 @@ def init_modelprovider_model_db(session: Session) -> None:
         ).first()
 
         if db_provider:
+            db_provider.base_url = provider_data["base_url"]
             db_provider.icon = provider_data["icon"]
             db_provider.description = provider_data["description"]
+            session.add(db_provider)
         else:
             db_provider = ModelProvider(
                 provider_name=provider_data["provider_name"],
