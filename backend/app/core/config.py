@@ -140,11 +140,13 @@ class Settings(BaseSettings):
         )
 
         return self
+    # Mongo DB
+    MONGODB_URL: str = "mongodb://127.0.0.1:2701/testdb"
 
     # Qdrant
     QDRANT_SERVICE_API_KEY: str | None = "XMj3HXm5GlBKQLwZuStOlkwZiOWTdd_IwZNDJINFh-w"
     QDRANT_URL: str = "http://localhost:6333"
-    # QDRANT_URL: str = "http://127.0.0.1:6333"
+
 
     QDRANT_COLLECTION: str | None = "kb_uploads"
 

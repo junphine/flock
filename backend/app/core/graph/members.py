@@ -164,8 +164,7 @@ class BaseNode:
         temperature: float,
     ):
 
-        if provider in ["zhipuai"] and openai_api_base:
-
+        if provider in ["zhipuai","deepseek"] and openai_api_base:
             self.model = ChatOpenAI(
                 model=model,
                 streaming=True,
@@ -180,7 +179,6 @@ class BaseNode:
                 openai_api_base=openai_api_base,
                 temperature=0,
             )
-
         elif provider in ["openai"] and openai_api_base:
             self.model = init_chat_model(
                 model,

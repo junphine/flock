@@ -15,6 +15,7 @@ os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 os.environ["HF_DATASETS_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
+celery_config = {}
 
 celery_app = Celery(
     "worker",
@@ -25,6 +26,7 @@ celery_app = Celery(
     include=["app.tasks.tasks"],
 )
 
+#celery_app.config_from_object(celery_config)
 celery_app.conf.update(
     result_expires=3600,
 )

@@ -65,6 +65,19 @@ def get_embedding_dimension(provider_name: str, model_name: str) -> int:
     return db_operation(_get_dimension)
 
 
+class RawTextEmbeddings(Embeddings, BaseModel):
+    dimension: int = 768
+
+    def _get_embedding(self,text):
+        return text
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return [self._get_embedding(text) for text in texts]
+
+    def embed_query(self, text: str) -> List[float]:
+        return self._get_embedding(text)
+
+
 class ZhipuAIEmbeddings(BaseModel, Embeddings):
     api_key: str
     model: str = "embedding-3"
@@ -157,6 +170,8 @@ def get_embedding_model(model__provider_name: str) -> Embeddings:
             # 对于local模型，我们可以通过实际嵌入一个样本文本来获取维度
             sample_embedding = embedding_model.embed_query("Sample text for dimension")
             embedding_model.dimension = len(sample_embedding)
+        elif model__provider_name == "raw_text":
+            embedding_model = RawTextEmbeddings(dimension=1024)
         else:
             raise ValueError(
                 f"Unsupported embedding model pvovider: {model__provider_name}"

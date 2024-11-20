@@ -220,6 +220,7 @@ python /app/app/initial_data.py
 
 ```bash
 poetry run celery -A app.core.celery_app.celery_app worker --loglevel=debug
+poetry run celery -A app.core.celery_app.celery_app worker -l info -P solo
 ```
 
 #### 3.Run Frontend
