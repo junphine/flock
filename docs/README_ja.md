@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="./README_cn.md">简体中文</a> |
-  <a href="./README.md">English</a> |
+  <a href="../README.md">English</a> |
   <a href="./README_ja.md">日本語</a> |
   <a href="#how-to-get-started">始め方</a>
 </p>
@@ -11,55 +11,34 @@
 >
 > ### 🎉 最新アップデート 2024/11/12
 >
-> + **意図認識ノード**: 新しい意図認識ノードが追加され、プリセットされたカテゴリに基づいてユーザー入力の意図を自動的に識別し、マルチ分類ルーティングをサポートします！
-> <img src="assets/intent.png" alt="intent recognition" width="500" />
+> - **意図認識ノード**: 新しい意図認識ノードが追加され、プリセットされたカテゴリに基づいてユーザー入力の意図を自動的に識別し、マルチ分類ルーティングをサポートします！
+>   <img src="../assets/intent.png" alt="intent recognition" width="500" />
 >
-> + **CrewAI ノードのサポート**: ワークフローで CrewAI の強力なマルチエージェント機能を活用できるようになりました！洗練されたエージェントチームを作成し、複雑な協調タスクを簡単に編成できます。
-> <img src="assets/crewai.jpg" alt="crewai" width="500"  />
+> - **CrewAI ノードのサポート**: ワークフローで CrewAI の強力なマルチエージェント機能を活用できるようになりました！洗練されたエージェントチームを作成し、複雑な協調タスクを簡単に編成できます。
+>   <img src="../assets/crewai.jpg" alt="crewai" width="500"  />
 
-### LangChain、LangGraph、およびその他のフレームワークに基づいたチャットボット、RAG、エージェント、およびマルチエージェントアプリケーションプロジェクトで、オープンソースであり、オフライン展開が可能です。
-<video src="https://private-user-images.githubusercontent.com/49232224/374006908-309ab01e-8a29-4764-b470-dbedea8d8622.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MjgyNjg4MzEsIm5iZiI6MTcyODI2ODUzMSwicGF0aCI6Ii80OTIzMjIyNC8zNzQwMDY5MDgtMzA5YWIwMWUtOGEyOS00NzY0LWI0NzAtZGJlZGVhOGQ4NjIyLm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNDEwMDclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjQxMDA3VDAyMzUzMVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTJiMGZiZjU3MGIyMWZkZDRkNjI3MmU5MzA1YTZhNmRlODVkZTcxYWI1MjYxMGM2ODU0NzM3OWVkN2MxNTk2MmEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.j-kXuux_wfe2bK2VW77TY53mTqj9iYn7kyuxwwwNQQw" data-canonical-src="https://private-user-images.githubusercontent.com/49232224/374006908-309ab01e-8a29-4764-b470-dbedea8d8622.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MjgyNjg4MzEsIm5iZiI6MTcyODI2ODUzMSwicGF0aCI6Ii80OTIzMjIyNC8zNzQwMDY5MDgtMzA5YWIwMWUtOGEyOS00NzY0LWI0NzAtZGJlZGVhOGQ4NjIyLm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNDEwMDclMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjQxMDA3VDAyMzUzMVomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPTJiMGZiZjU3MGIyMWZkZDRkNjI3MmU5MzA1YTZhNmRlODVkZTcxYWI1MjYxMGM2ODU0NzM3OWVkN2MxNTk2MmEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.j-kXuux_wfe2bK2VW77TY53mTqj9iYn7kyuxwwwNQQw" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px">
-</video>
+### Flock は、ワークフローベースのローコードプラットフォームで、チャットボット、RAG アプリケーション、マルチエージェントチームの調整を迅速に構築するためのプラットフォームです。LangChain と LangGraph をベースに構築され、柔軟なローコード協調エージェント編成ソリューションを提供し、チャットボット、RAG アプリケーション、エージェント、マルチエージェントシステムをサポートし、オフライン運用機能も備えています。
 
-![alt text](assets/login.jpg)
+<video src="https://private-user-images.githubusercontent.com/49232224/386539219-5dc96133-72f3-4cc3-9f50-096c38bde715.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MzE2NjMzNDQsIm5iZiI6MTczMTY2MzA0NCwicGF0aCI6Ii80OTIzMjIyNC8zODY1MzkyMTktNWRjOTYxMzMtNzJmMy00Y2MzLTlmNTAtMDk2YzM4YmRlNzE1Lm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNDExMTUlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjQxMTE1VDA5MzA0NFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWVhOWY1NTc1Mjk5YWU1MjZmNmQyNmY3Mzk0YjY2MGYyMzlmZWQ2MTVkMjExODEwNmY3YmMxYTVmNGRhNzMxZWEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.69R3pTktxrl8C6tdduABLiRhkhwdfeVO3vlGGTGK4to" data-canonical-src="https://private-user-images.githubusercontent.com/49232224/386539219-5dc96133-72f3-4cc3-9f50-096c38bde715.mp4?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MzE2NjMzNDQsIm5iZiI6MTczMTY2MzA0NCwicGF0aCI6Ii80OTIzMjIyNC8zODY1MzkyMTktNWRjOTYxMzMtNzJmMy00Y2MzLTlmNTAtMDk2YzM4YmRlNzE1Lm1wND9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUFLSUFWQ09EWUxTQTUzUFFLNFpBJTJGMjAyNDExMTUlMkZ1cy1lYXN0LTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjQxMTE1VDA5MzA0NFomWC1BbXotRXhwaXJlcz0zMDAmWC1BbXotU2lnbmF0dXJlPWVhOWY1NTc1Mjk5YWU1MjZmNmQyNmY3Mzk0YjY2MGYyMzlmZWQ2MTVkMjExODEwNmY3YmMxYTVmNGRhNzMxZWEmWC1BbXotU2lnbmVkSGVhZGVycz1ob3N0In0.69R3pTktxrl8C6tdduABLiRhkhwdfeVO3vlGGTGK4to" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:640px; min-height: 200px">
+ </video>
 
 ### 🤖️ 概要
 
-![alt text](assets/image.png)
+<img src="../assets/Overview.png" alt="overview"  />
 
-#### ワークフロー
+### ワークフロー
 
-![image](https://github.com/user-attachments/assets/a4e33565-7acf-45d9-8e82-5a740cd88344)
-![image](https://github.com/user-attachments/assets/4d5874f1-aeb0-47c5-b907-21878a2fa4d9)
+<img src="../assets/workflow.png" alt="overview"  />
 
-### ノードタイプと機能
-
-Flock のワークフローシステムは、様々なタイプのノードで構成されており、それぞれが特定の目的を果たします：
-
-1. 入力ノード：初期入力を処理し、ワークフローが扱える形式に変換します。
-2. LLM ノード：大規模言語モデルを利用してテキスト生成と処理を行います。
-3. 検索ノード：知識ベースから関連情報を取得します。
-4. ツールノード：特定のタスクや操作を実行し、ワークフローの機能を拡張します。
-5. 検索ツールノード：検索機能とツール機能を組み合わせます。
-6. 回答ノード：前のノードの結果を統合し、最終的な回答や出力を生成します。
-7. サブグラフノード：完全なサブワークフロ をカプセル化し、モジュラー設計を可能にします。
-8. 開始と終了ノード：ワークフローの開始と終了を示します。
-
-将来計画されているノードには以下が含まれます：
-
-- 意図認識ノード
-- 条件分岐ノード（If-Else）
-- ファイルアップロードノード
-- コード実行ノード
-- パラメータ抽出ノード
-
-これらのノードを組み合わせることで、様々な複雑なビジネスニーズやアプリケーションシナリオに適した強力で柔軟なワークフローを作成できます。
-
-#### 画像
+### エージェントチャット
 
 ![image](https://github.com/user-attachments/assets/4097b087-0309-4aab-8be9-a06fdc9d4964)
 
-#### ヒューマン・イン・ザ・ループ（人間の承認または LLM の再考または人間への助けを求める）
+### 知識検索
+
+![image](https://github.com/user-attachments/assets/836fac80-ab49-4f6b-973c-25ba173149eb)
+
+### ヒューマン・イン・ザ・ループ（人間の承認または LLM の再考または人間への助けを求める）
 
 <p>
   <img src="https://github.com/user-attachments/assets/ec53f7de-10cb-4001-897a-2695da9cf6bf" alt="image" style="width: 49%; display: inline-block;">
@@ -95,7 +74,8 @@ Flock は、大規模言語モデル（LLM）アプリケーションを開発�
 - [x] 階層エージェント
 - [x] シーケンシャルエージェント
 - [x] ワークフロー
-- [ ] CrewAI 統合 ---進行中
+- [x] 意図認識ノード - ユーザー入力の意図を自動的に識別し、異なる処理フローにルーティング
+- [x] CrewAI 統合 ---進行中
 - [ ] さらに多くのマルチエージェント
 
 2 モデル
@@ -115,7 +95,7 @@ Flock は、大規模言語モデル（LLM）アプリケーションを開発�
 
 ### 🏘️ ハイライト
 
-- 永続的な会話：チャット履歴を保存および維持し、会話を続けることができます。
+- 永続 �� な会話：チャット履歴を保存および維持し、会話を続けるとができます。
 - 可観測性：LangSmith を使用してエージェントのパフォーマンスと出力をリアルタイムで監視および追跡し、効率的に動作するようにします。
 - ツール呼び出し：エージェントが外部ツールや API を利用できるようにします。
 - 検索強化生成：エージェントが内部知識ベースを利用して推論できるようにします。
@@ -140,13 +120,13 @@ cp .env.example .env
 ##### 1.3 秘密鍵を生成
 
 .env ファイルのいくつかの環境変数には、デフォルト値として changethis が設定されています。
-これらを秘密鍵に変更する必要があります。秘密鍵を生成するには、次のコマンドを実行します：
+これらを秘密鍵に変更する必要があります。秘密鍵を生成するには、次のコマンドを実行します ���
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-内容をコピーしてパスワード/秘密鍵として使用します。もう一度実行して別の安全な鍵を生成します。
+内容をコピーしてパスワード/秘密鍵として使用します。もう一度実して別の安全な鍵を生成します。
 
 ##### 1.3 postgres、qdrant、redis をインストール
 

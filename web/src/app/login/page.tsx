@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import React from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 
 import type { ApiError } from "@/client";
 import type { Body_login_login_access_token as AccessToken } from "@/client/models/Body_login_login_access_token";
@@ -42,6 +43,7 @@ function Login() {
     },
   });
   const router = useRouter();
+  const { t } = useTranslation();
   const onSubmit: SubmitHandler<AccessToken> = async (data) => {
     try {
       await login(data);
@@ -57,7 +59,6 @@ function Login() {
       h="100vh"
       w="100vw"
       position="relative"
-      // bgImage="src('https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?q=80&w=2070&auto=format&fit=crop')"
       bgImage="bg.avif"
       bgSize="cover"
       bgPosition="center"
@@ -75,10 +76,12 @@ function Login() {
         maxW="700px"
       >
         <Text
-          fontSize="8xl"
+          fontSize="7xl"
           fontWeight="bold"
           color="white"
           textShadow="0 2px 4px rgba(0,0,0,0.2)"
+          letterSpacing="tight"
+          mb={4}
         >
           Flock
         </Text>
@@ -86,40 +89,47 @@ function Login() {
           fontSize="2xl"
           color="white"
           lineHeight="1.8"
-          opacity={0.9}
-          mb={8}
+          opacity={0.95}
+          fontWeight="500"
+          mb={6}
         >
-          {/* Flexible Low-code Orchestrating Collaborative-agent Kits */}
           <Text as="span" color="blue.300" fontWeight="bold">
             F
           </Text>
-          exible{" "}
+          {t("login.subtitle.flexible")}{" "}
           <Text as="span" color="blue.300" fontWeight="bold">
             L
           </Text>
-          ow-code{" "}
+          {t("login.subtitle.lowcode")}{" "}
           <Text as="span" color="blue.300" fontWeight="bold">
             O
           </Text>
-          rchestrating{" "}
+          {t("login.subtitle.orchestrating")}{" "}
           <Text as="span" color="blue.300" fontWeight="bold">
             C
           </Text>
-          ollaborative-agent &{" "}
+          {t("login.subtitle.collaborative")}{" "}
           <Text as="span" color="blue.300" fontWeight="bold">
             K
           </Text>
-          its
+          {t("login.subtitle.kits")}
         </Text>
         <Text fontSize="2xl" color="white" lineHeight="1.8" opacity={0.9}>
-          低代码 AI 应用开发平台
+          {t("login.subtitle.platform")}
         </Text>
-        <Text fontSize="xl" color="white" mt={4} lineHeight="1.6" opacity={0.8}>
-          快速构建ChatBot、RAG和Muti-Agent应用
+        <Text
+          fontSize="xl"
+          color="white"
+          mt={4}
+          lineHeight="1.8"
+          opacity={0.9}
+          fontWeight="400"
+        >
+          {t("login.subtitle.features.line1")}
           <br />
-          基于 LangGraph 和 Langchain 的可视化workflow
+          {t("login.subtitle.features.line2")}
           <br />
-          让LLM应用开发更简单高效
+          {t("login.subtitle.features.line3")}
         </Text>
       </Box>
 
@@ -127,18 +137,30 @@ function Login() {
         as="form"
         onSubmit={handleSubmit(onSubmit)}
         w="400px"
-        bg="rgba(255, 255, 255, 0.15)"
+        bg="rgba(255, 255, 255, 0.1)"
         backdropFilter="blur(20px)"
-        borderRadius="xl"
+        borderRadius="2xl"
         p={8}
         boxShadow="xl"
         flexDirection="column"
         gap={6}
+        border="1px solid rgba(255, 255, 255, 0.2)"
       >
         <VStack spacing={6}>
-          <Image src="logo.png" alt="logo" height="60px" width="auto" />
-          <Text fontSize="2xl" fontWeight="bold" color="white">
-            欢迎回来
+          <Image
+            src="logo.png"
+            alt="logo"
+            height="60px"
+            width="auto"
+            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.1))"
+          />
+          <Text
+            fontSize="2xl"
+            fontWeight="600"
+            color="white"
+            letterSpacing="tight"
+          >
+            {t("login.title")}
           </Text>
 
           <FormControl id="username" isInvalid={!!errors.username || !!error}>
@@ -147,25 +169,26 @@ function Login() {
               {...register("username", {
                 pattern: emailPattern,
               })}
-              placeholder="邮箱地址"
+              placeholder={t("login.form.email.placeholder")!}
               type="email"
               size="lg"
-              bg="rgba(255, 255, 255, 0.1)"
+              bg="rgba(255, 255, 255, 0.08)"
               border="1px solid rgba(255, 255, 255, 0.2)"
               color="white"
               _placeholder={{ color: "rgba(255, 255, 255, 0.6)" }}
               _hover={{
-                bg: "rgba(255, 255, 255, 0.2)",
+                bg: "rgba(255, 255, 255, 0.12)",
                 borderColor: "rgba(255, 255, 255, 0.3)",
               }}
               _focus={{
-                bg: "rgba(255, 255, 255, 0.2)",
+                bg: "rgba(255, 255, 255, 0.12)",
                 borderColor: "rgba(255, 255, 255, 0.4)",
-                boxShadow: "none",
+                boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.4)",
               }}
+              borderRadius="xl"
             />
             {errors.username && (
-              <FormErrorMessage>{errors.username.message}</FormErrorMessage>
+              <FormErrorMessage>{t("login.form.email.error")}</FormErrorMessage>
             )}
           </FormControl>
 
@@ -174,21 +197,22 @@ function Login() {
               <Input
                 {...register("password")}
                 type={show ? "text" : "password"}
-                placeholder="密码"
+                placeholder={t("login.form.password.placeholder")!}
                 autoComplete="password"
-                bg="rgba(255, 255, 255, 0.1)"
+                bg="rgba(255, 255, 255, 0.08)"
                 border="1px solid rgba(255, 255, 255, 0.2)"
                 color="white"
                 _placeholder={{ color: "rgba(255, 255, 255, 0.6)" }}
                 _hover={{
-                  bg: "rgba(255, 255, 255, 0.2)",
+                  bg: "rgba(255, 255, 255, 0.12)",
                   borderColor: "rgba(255, 255, 255, 0.3)",
                 }}
                 _focus={{
-                  bg: "rgba(255, 255, 255, 0.2)",
+                  bg: "rgba(255, 255, 255, 0.12)",
                   borderColor: "rgba(255, 255, 255, 0.4)",
-                  boxShadow: "none",
+                  boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.4)",
                 }}
+                borderRadius="xl"
               />
               <InputRightElement
                 color="white"
@@ -200,13 +224,19 @@ function Login() {
               >
                 <Icon
                   onClick={setShow.toggle}
-                  aria-label={show ? "Hide password" : "Show password"}
+                  aria-label={
+                    show
+                      ? t("login.form.password.hide")!
+                      : t("login.form.password.show")!
+                  }
                 >
                   {show ? <ViewOffIcon /> : <ViewIcon />}
                 </Icon>
               </InputRightElement>
             </InputGroup>
-            {error && <FormErrorMessage>{error}</FormErrorMessage>}
+            {error && (
+              <FormErrorMessage>{t("login.form.error")}</FormErrorMessage>
+            )}
           </FormControl>
 
           <Link
@@ -215,12 +245,13 @@ function Login() {
             opacity={0.8}
             alignSelf="flex-end"
             fontSize="sm"
+            fontWeight="500"
             _hover={{
               textDecoration: "none",
               opacity: 1,
             }}
           >
-            忘记密码？
+            {t("login.form.password.forgot")}
           </Link>
 
           <Button
@@ -229,16 +260,22 @@ function Login() {
             isLoading={isSubmitting}
             w="full"
             size="lg"
-            bg="rgba(255, 255, 255, 0.2)"
+            bg="ui.main"
             color="white"
             _hover={{
-              bg: "rgba(255, 255, 255, 0.3)",
+              bg: "blue.500",
+              transform: "translateY(-1px)",
             }}
             _active={{
-              bg: "rgba(255, 255, 255, 0.4)",
+              bg: "blue.600",
+              transform: "translateY(0)",
             }}
+            transition="all 0.2s"
+            borderRadius="xl"
+            fontSize="md"
+            fontWeight="500"
           >
-            登录
+            {t("login.form.submit")}
           </Button>
         </VStack>
       </Flex>

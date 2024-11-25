@@ -44,7 +44,7 @@ const VariableSelector: React.FC<VariableSelectorProps> = ({
 
   return (
     <Box>
-      <Text fontWeight="bold" mb={2}>
+      <Text fontWeight="600" mb={2} color="gray.700" fontSize="sm">
         {label}
       </Text>
       <Popover
@@ -59,65 +59,96 @@ const VariableSelector: React.FC<VariableSelectorProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder || String(t("workflow.variableSelector.placeholder"))}
+            placeholder={
+              placeholder || String(t("workflow.variableSelector.placeholder"))
+            }
             style={{
               whiteSpace: "pre-wrap",
               minHeight: minHeight,
             }}
+            bg="ui.inputbgcolor"
             borderColor="gray.200"
-            _hover={{ borderColor: "gray.300" }}
-            _focus={{ borderColor: "blue.500", boxShadow: "none" }}
+            borderRadius="lg"
+            fontSize="sm"
+            transition="all 0.2s"
+            _hover={{
+              borderColor: "gray.300",
+              transform: "translateY(-1px)",
+              boxShadow: "sm",
+            }}
+            _focus={{
+              borderColor: "blue.500",
+              boxShadow: "0 0 0 1px var(--chakra-colors-blue-500)",
+              transform: "translateY(-1px)",
+            }}
           />
         </PopoverTrigger>
         <PopoverContent
           width="auto"
-          minWidth="200px"
+          minWidth="250px"
           maxWidth="400px"
           boxShadow="lg"
           border="1px solid"
-          borderColor="gray.200"
+          borderColor="gray.100"
+          borderRadius="lg"
           p={2}
+          bg="white"
+          _focus={{
+            outline: "none",
+          }}
         >
           <VStack align="stretch" spacing={1}>
-            <Text fontSize="sm" fontWeight="500" color="gray.600" p={2}>
+            <Text
+              fontSize="sm"
+              fontWeight="600"
+              color="gray.600"
+              p={2}
+              borderBottom="1px solid"
+              borderColor="gray.100"
+            >
               {t("workflow.variableSelector.availableVariables")}
             </Text>
             {availableVariables?.length > 0 ? (
               availableVariables.map((v) => (
                 <Button
                   key={`${v.nodeId}.${v.variableName}`}
-                  onClick={() => insertVariable(`${v.nodeId}.${v.variableName}`)}
+                  onClick={() =>
+                    insertVariable(`${v.nodeId}.${v.variableName}`)
+                  }
                   size="sm"
                   variant="ghost"
                   justifyContent="flex-start"
                   px={3}
                   py={2}
                   height="auto"
+                  transition="all 0.2s"
                   _hover={{
                     bg: "blue.50",
+                    transform: "translateX(2px)",
                   }}
                   leftIcon={
                     <Box
                       as="span"
-                      bg="blue.100"
-                      color="blue.700"
+                      bg="blue.50"
+                      color="blue.600"
                       px={2}
                       py={1}
                       borderRadius="md"
                       fontSize="xs"
-                      fontWeight="500"
+                      fontWeight="600"
+                      transition="all 0.2s"
                     >
                       {v.nodeId}
                     </Box>
                   }
                 >
-                  <Text fontSize="sm" ml={2}>
+                  <Text fontSize="sm" ml={2} color="gray.700">
                     {v.variableName}
                   </Text>
                 </Button>
               ))
             ) : (
-              <Text fontSize="sm" color="gray.500" textAlign="center" p={2}>
+              <Text fontSize="sm" color="gray.500" textAlign="center" p={4}>
                 {t("workflow.variableSelector.noVariables")}
               </Text>
             )}
@@ -128,4 +159,4 @@ const VariableSelector: React.FC<VariableSelectorProps> = ({
   );
 };
 
-export default VariableSelector; 
+export default VariableSelector;

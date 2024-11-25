@@ -5,7 +5,6 @@ import {
   FaTools,
   FaCommentDots,
   FaDatabase,
- 
 } from "react-icons/fa";
 import { FaBookAtlas, FaPeopleGroup } from "react-icons/fa6";
 import { TfiGithub } from "react-icons/tfi";
@@ -109,25 +108,11 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     inputVariables: [],
     outputVariables: ["response"],
   },
-  answer: {
-    display: "Answer",
-    icon: FaCommentDots,
-    colorScheme: "orange",
-    properties: AnswerNodeProperties,
-    initialData: {
-      answer: null,
-    },
-    allowedConnections: {
-      sources: ["left", "right"],
-      targets: ["left", "right"],
-    },
-    inputVariables: [],
-    outputVariables: ["response"],
-  },
+
   retrieval: {
-    display: "Knowledge Retrieval",
+    display: "KB Retrieval",
     icon: FaBookAtlas,
-    colorScheme: "teal",
+    colorScheme: "red",
     properties: RetrievalProperties,
     initialData: {
       query: null,
@@ -146,7 +131,7 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
   toolretrieval: {
     display: "Retrieval As Tools",
     icon: FaDatabase,
-    colorScheme: "red",
+    colorScheme: "teal",
     properties: RetrievalToolNodeProperties,
     allowedConnections: {
       sources: ["left", "right"],
@@ -187,14 +172,29 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
       targets: ["left"],
     },
     outputVariables: ["class_name"],
-    inputVariables: ["input"],
+    inputVariables: ["Input"],
     initialData: {
       categories: [
         { category_id: "1", category_name: "" },
-        { category_id: "2", category_name: "" }
+        { category_id: "2", category_name: "" },
       ],
       model: "glm-4-flash",
-    }
+    },
+  },
+  answer: {
+    display: "Answer",
+    icon: FaCommentDots,
+    colorScheme: "orange",
+    properties: AnswerNodeProperties,
+    initialData: {
+      answer: null,
+    },
+    allowedConnections: {
+      sources: ["left", "right"],
+      targets: ["left", "right"],
+    },
+    inputVariables: [],
+    outputVariables: ["response"],
   },
 };
 
