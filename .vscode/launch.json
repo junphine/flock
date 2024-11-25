@@ -12,7 +12,8 @@
         "args": [
             "-A", "app.core.celery_app.celery_app", 
             "worker",
-            "--loglevel=debug"
+            "--loglevel=debug",
+            "--pool=solo"
         ],
         "console": "integratedTerminal",
         "justMyCode": false,

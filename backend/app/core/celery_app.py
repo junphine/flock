@@ -1,6 +1,6 @@
 import logging
 import os
-
+import sys
 from celery import Celery
 
 from app.core.config import settings
@@ -46,3 +46,6 @@ celery_app.conf.update(
 def test_celery(word: str) -> str:
     logging.info(f"Test task received: {word}")
     return f"test task return {word}"
+
+if __name__ == "__main__":
+    celery_app.start(sys.argv)
