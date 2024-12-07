@@ -2,7 +2,7 @@ import {
   Box,
   Text,
   VStack,
-  Button,
+
   useToast,
   HStack,
   Input,
@@ -11,23 +11,18 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import React, { useCallback, useState, useEffect } from "react";
-import { FaPlay, FaPlus, FaTrash } from "react-icons/fa";
+import {  FaPlus, FaTrash } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import Editor, { type Monaco } from "@monaco-editor/react";
+import Editor from "@monaco-editor/react";
+import type { OnMount } from "@monaco-editor/react";
+import type { editor as MonacoEditor } from "monaco-editor";
 
-import { useVariableInsertion } from "../../../../hooks/graphs/useVariableInsertion";
 import { VariableReference } from "../../FlowVis/variableSystem";
-
 
 interface ArgVariable {
   name: string;
   value: string;
 }
-
-const DEFAULT_PYTHON_TEMPLATE = `def main(arg1: str, arg2: str) -> dict:
-    return {
-        "result": arg1 + arg2,
-    }`;
 
 interface CodeNodePropertiesProps {
   node: any;
@@ -36,14 +31,44 @@ interface CodeNodePropertiesProps {
 }
 
 // Monaco Editor 主题配置
-const MONACO_THEME = {
-  base: "vs",
+const MONACO_THEME: MonacoEditor.IStandaloneThemeData = {
+  base: 'vs' as const,
   inherit: true,
   rules: [],
   colors: {
     "editor.background": "#F9FAFB",
     "editor.lineHighlightBackground": "#F3F4F6",
   },
+};
+
+// 工具函数：获取简洁版本的代码（不带变量引用）
+const getSimplifiedCode = (code: string, currentArgs: ArgVariable[]) => {
+  const [funcDef, ...restCode] = code.split("\n");
+  const simplifiedFuncDef = funcDef.replace(
+    /(def\s+main\s*\().*?(\))/,
+    (match: string, start: string, end: string) => {
+      const params = currentArgs.map((arg) => `${arg.name}: str`).join(", ");
+      return `${start}${params}${end}`;
+    }
+  );
+  return [simplifiedFuncDef, ...restCode].join("\n");
+};
+
+// 工具函数：获取完整版本的代码（带变量引用）
+const getFullCode = (code: string, currentArgs: ArgVariable[]) => {
+  const [funcDef, ...restCode] = code.split("\n");
+  const fullFuncDef = funcDef.replace(
+    /(def\s+main\s*\().*?(\))/,
+    (match: string, start: string, end: string) => {
+      const params = currentArgs
+        .map((arg) =>
+          arg.value ? `${arg.name}: str = {${arg.value}}` : `${arg.name}: str`
+        )
+        .join(", ");
+      return `${start}${params}${end}`;
+    }
+  );
+  return [fullFuncDef, ...restCode].join("\n");
 };
 
 const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
@@ -53,178 +78,71 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
 }) => {
   const { t } = useTranslation();
   const toast = useToast();
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [editorInstance, setEditorInstance] = useState<any>(null);
-  const [args, setArgs] = useState<ArgVariable[]>([
-    { name: "arg1", value: "" },
-    { name: "arg2", value: "" },
-  ]);
+ 
+  const [editorInstance, setEditorInstance] =
+    useState<MonacoEditor.IStandaloneCodeEditor | null>(null);
+  const [args, setArgs] = useState<ArgVariable[]>([]);
+
+  // 修改变量更新时的处理函数
+  const updateCodeWithNewArgs = useCallback(
+    (newArgs: ArgVariable[]) => {
+      if (editorInstance) {
+        const model = editorInstance.getModel();
+        if (!model) return;
+
+        const value = model.getValue();
+        // 保存完整版本（带变量引用）
+        const codeToSave = getFullCode(value, newArgs);
+        onNodeDataChange(node.id, "code", codeToSave);
+      }
+    },
+    [editorInstance, node.id, onNodeDataChange]
+  );
 
   // 初始化代码模板和参数
   useEffect(() => {
     try {
-      if (!node.data.code) {
-        const params = args.map(arg => `${arg.name}: str`).join(', ');
-        const defaultCode = `def main(${params}) -> dict:\n    return {\n        "result": ${args.map(arg => arg.name).join(' + ')},\n    }`;
+      if (node.data.code) {
+        // 从现有代码中解析参数
+        const funcDefMatch = node.data.code.match(/def\s+main\s*\((.*?)\)/);
+        if (funcDefMatch) {
+          const params = funcDefMatch[1].split(",").map((param: string) => {
+            const [name, value] = param
+              .trim()
+              .split("=")
+              .map((s: string) => s.trim());
+            const nameOnly = name.split(":")[0].trim();
+            return {
+              name: nameOnly,
+              value: value ? value.replace(/[{}]/g, "") : "",
+            };
+          });
+          setArgs(params);
+        }
+      } else {
+        // 使用默认参数
+        const defaultArgs = [
+          { name: "arg1", value: "" },
+          { name: "arg2", value: "" },
+        ];
+        setArgs(defaultArgs);
+        const defaultCode = `def main(arg1: str, arg2: str) -> dict:\n    return {"code_result": ""}\n`;
         onNodeDataChange(node.id, "code", defaultCode);
       }
 
-      if (!node.data.args) {
-        onNodeDataChange(node.id, "args", args);
-      } else {
+      if (node.data.args) {
         setArgs(node.data.args);
       }
     } catch (error) {
-      console.error('Error in initialization:', error);
+      console.error("Error in initialization:", error);
     }
-  }, [node.id, node.data.code, node.data.args, onNodeDataChange, args]);
+  }, [node.id, node.data.code, node.data.args, onNodeDataChange]);
 
-  // 修改参数处理函数
-  const handleArgValueChange = useCallback(
-    (index: number, value: string) => {
-      try {
-        const newArgs = [...args];
-        newArgs[index].value = value;
-        setArgs(newArgs);
-        onNodeDataChange(node.id, "args", newArgs);
-
-        // 更新保存的代码，包含变量引用
-        if (editorInstance) {
-          const currentCode = editorInstance.getValue();
-          const [funcDef, ...restCode] = currentCode.split('\n');
-          
-          // 保存时的代码 - 包含变量引用
-          const updatedFuncDef = funcDef.replace(
-            /(def\s+main\s*\().*?(\))/,
-            (match: string, start: string, end: string) => {
-              const params = newArgs.map(arg => 
-                arg.value 
-                  ? `${arg.name}: str = {${arg.value}}`
-                  : `${arg.name}: str`
-              ).join(', ');
-              return `${start}${params}${end}`;
-            }
-          );
-          
-          // 保存完整代码，包含变量引用
-          const codeToSave = [updatedFuncDef, ...restCode].join('\n');
-          onNodeDataChange(node.id, "code", codeToSave);
-          
-          // 显示时的代码 - 不包含变量引用
-          const displayFuncDef = funcDef.replace(
-            /(def\s+main\s*\().*?(\))/,
-            (match: string, start: string, end: string) => {
-              const params = newArgs.map(arg => `${arg.name}: str`).join(', ');
-              return `${start}${params}${end}`;
-            }
-          );
-          const displayCode = [displayFuncDef, ...restCode].join('\n');
-          editorInstance.setValue(displayCode);
-        }
-      } catch (error) {
-        console.error('Error updating code:', error);
-        toast({
-          title: "更新代码失败",
-          description: "请重试或刷新页面",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    },
-    [args, editorInstance, node.id, onNodeDataChange, toast]
-  );
-
-  const handleAddArg = useCallback(() => {
-    const newArg = { name: "", value: "" };
-    const newArgs = [...args, newArg];
-    setArgs(newArgs);
-    onNodeDataChange(node.id, "args", newArgs);
-  }, [args, node.id, onNodeDataChange]);
-
-  const handleRemoveArg = useCallback(
-    (index: number) => {
-      const newArgs = args.filter((_, i) => i !== index);
-      setArgs(newArgs);
-      onNodeDataChange(node.id, "args", newArgs);
-      
-      // 只更新函数定义
-      if (editorInstance) {
-        const currentCode = editorInstance.getValue();
-        const [funcDef, ...restCode] = currentCode.split('\n');
-        const newFuncDef = funcDef.replace(
-          /(def\s+main\s*\().*?(\))/,
-          (match: string, start: string, end: string) => {
-            const params = newArgs.map(arg => `${arg.name}: str`).join(', ');
-            return `${start}${params}${end}`;
-          }
-        );
-        editorInstance.setValue([newFuncDef, ...restCode].join('\n'));
-      }
-    },
-    [args, editorInstance, node.id, onNodeDataChange]
-  );
-
-  const handleArgNameChange = useCallback(
-    (index: number, name: string) => {
-      const newArgs = [...args];
-      newArgs[index].name = name;
-      setArgs(newArgs);
-      onNodeDataChange(node.id, "args", newArgs);
-      
-      // 只更新函数定义
-      if (editorInstance) {
-        const currentCode = editorInstance.getValue();
-        const [funcDef, ...restCode] = currentCode.split('\n');
-        const newFuncDef = funcDef.replace(
-          /(def\s+main\s*\().*?(\))/,
-          (match: string, start: string, end: string) => {
-            const params = newArgs.map(arg => `${arg.name}: str`).join(', ');
-            return `${start}${params}${end}`;
-          }
-        );
-        editorInstance.setValue([newFuncDef, ...restCode].join('\n'));
-      }
-    },
-    [args, editorInstance, node.id, onNodeDataChange]
-  );
-
-  const {
-    showVariables,
-    setShowVariables,
-    inputRef,
-    handleKeyDown,
-    insertVariable,
-  } = useVariableInsertion<HTMLTextAreaElement>({
-    onValueChange: (value: string) => {
-      if (value !== undefined) {
-        onNodeDataChange(node.id, "code", value);
-      }
-    },
-    availableVariables,
-  });
-
-  const handleExecute = async () => {
-    setIsExecuting(true);
-    try {
-      const code = node.data.code;
-      // TODO: 调用端 API 执行代码
-
-      toast({
-        title: "行成功",
-        status: "success",
-        duration: 3000,
-      });
-    } catch (error) {
-      toast({
-        title: "执行失败",
-        description: error instanceof Error ? error.message : "未知错误",
-        status: "error",
-        duration: 3000,
-      });
-    } finally {
-      setIsExecuting(false);
-    }
+  // 编辑器加载完成时的回调
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    setEditorInstance(editor);
+    monaco.editor.defineTheme("python-theme", MONACO_THEME);
+    monaco.editor.setTheme("python-theme");
   };
 
   // Monaco Editor 配置
@@ -245,71 +163,64 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
     lineNumbersMinChars: 3,
     glyphMargin: false,
     folding: false,
-    lineDecorationsWidth: 5,
+    lineDecorationsWidth: 10,
+    wordWrap: "on" as const,
+    scrollbar: {
+      horizontal: "hidden",
+      verticalScrollbarSize: 10,
+    },
+    overviewRulerLanes: 0,
+    hideCursorInOverviewRuler: true,
+    overviewRulerBorder: false,
   } as const;
 
-  // 编器加载完成时的回调
-  const handleEditorDidMount = (editor: any, monaco: any) => {
-    setEditorInstance(editor);
-    
-    // 定义 Python 主
-    monaco.editor.defineTheme("python-theme", MONACO_THEME);
-    monaco.editor.setTheme("python-theme");
+  // 修改参数处理函数
+  const handleArgValueChange = useCallback(
+    (index: number, value: string) => {
+      const newArgs = [...args];
+      newArgs[index].value = value;
+      setArgs(newArgs);
+      onNodeDataChange(node.id, "args", newArgs);
+      updateCodeWithNewArgs(newArgs);
+    },
+    [args, updateCodeWithNewArgs, onNodeDataChange, node.id]
+  );
 
-    // 初始化代码显示
-    if (node.data.code && editor) {
-      const [funcDef, ...restCode] = node.data.code.split('\n');
-      const displayFuncDef = funcDef.replace(
-        /(def\s+main\s*\().*?(\))/,
-        (match: string, start: string, end: string) => {
-          const params = args.map(arg => `${arg.name}: str`).join(', ');
-          return `${start}${params}${end}`;
-        }
-      );
-      editor.setValue([displayFuncDef, ...restCode].join('\n'));
-    }
+  const handleArgNameChange = useCallback(
+    (index: number, name: string) => {
+      const newArgs = [...args];
+      newArgs[index].name = name;
+      setArgs(newArgs);
+      onNodeDataChange(node.id, "args", newArgs);
+      updateCodeWithNewArgs(newArgs);
+    },
+    [args, updateCodeWithNewArgs, onNodeDataChange,node.id]
+  );
 
-    // 添加自动补全
-    monaco.languages.registerCompletionItemProvider("python", {
-      provideCompletionItems: () => {
-        const suggestions = [
-          {
-            label: "def",
-            kind: monaco.languages.CompletionItemKind.Keyword,
-            insertText: "def ${1:function_name}(${2:parameters}):\n\t${0}",
-            insertTextRules:
-              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          },
-          {
-            label: "return",
-            kind: monaco.languages.CompletionItemKind.Keyword,
-            insertText: "return ${0}",
-            insertTextRules:
-              monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-          },
-          // 可以添加更多自动补全项
-        ];
-        return { suggestions };
-      },
-    });
-  };
+  const handleRemoveArg = useCallback(
+    (index: number) => {
+      const newArgs = args.filter((_, i) => i !== index);
+      setArgs(newArgs);
+      onNodeDataChange(node.id, "args", newArgs);
+      updateCodeWithNewArgs(newArgs);
+    },
+    [args, updateCodeWithNewArgs, onNodeDataChange,node.id]
+  );
+
+  const handleAddArg = useCallback(() => {
+    const newArg = { name: "", value: "" };
+    const newArgs = [...args, newArg];
+    setArgs(newArgs);
+    onNodeDataChange(node.id, "args", newArgs);
+  }, [args, node.id, onNodeDataChange]);
 
   // 添加加载状态处理
-  const handleEditorWillMount = (monaco: Monaco) => {
-    // 可以在这里进行一些编辑器加载前的配置
-    monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-      noSemanticValidation: true,
-      noSyntaxValidation: true,
-    });
-  };
-
-  // 添加加载中组件
   const handleEditorLoading = () => {
     return (
-      <Box 
-        display="flex" 
-        alignItems="center" 
-        justifyContent="center" 
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
         height="300px"
         bg="gray.50"
         borderRadius="md"
@@ -321,7 +232,7 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
 
   // 添加错误处理
   const handleEditorError = (error: unknown) => {
-    console.error('Monaco Editor loading error:', error);
+    console.error("Monaco Editor loading error:", error);
     toast({
       title: "编辑器加载失败",
       description: "请刷新页面重试",
@@ -403,52 +314,24 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
           <Editor
             height="300px"
             defaultLanguage="python"
-            value={node.data.code}
+            // 显示简洁版本
+            value={getSimplifiedCode(node.data.code, args)}
             onChange={(value: string | undefined) => {
               if (value !== undefined) {
-                // 保存时需要处理变量引用
-                const [funcDef, ...restCode] = value.split('\n');
-                const updatedFuncDef = funcDef.replace(
-                  /(def\s+main\s*\().*?(\))/,
-                  (match: string, start: string, end: string) => {
-                    const params = args.map(arg => 
-                      arg.value 
-                        ? `${arg.name}: str = {${arg.value}}`
-                        : `${arg.name}: str`
-                    ).join(', ');
-                    return `${start}${params}${end}`;
-                  }
-                );
-                const codeToSave = [updatedFuncDef, ...restCode].join('\n');
-                onNodeDataChange(node.id, "code", codeToSave);
+                // 保存完整版本（带变量引用）
+                const fullCode = getFullCode(value, args);
+                onNodeDataChange(node.id, "code", fullCode);
               }
             }}
             options={editorOptions}
             onMount={handleEditorDidMount}
-            loading="Loading..."
+            loading={handleEditorLoading()}
             theme="python-theme"
           />
         </Box>
       </Box>
 
-      <Button
-        leftIcon={<FaPlay />}
-        onClick={handleExecute}
-        isLoading={isExecuting}
-        colorScheme="purple"
-        size="md"
-        width="100%"
-        transition="all 0.2s"
-        _hover={{
-          transform: "translateY(-1px)",
-          boxShadow: "md",
-        }}
-        _active={{
-          transform: "translateY(0)",
-        }}
-      >
-        {t("执行代码")}
-      </Button>
+     
 
       {node.data.output && (
         <Box
