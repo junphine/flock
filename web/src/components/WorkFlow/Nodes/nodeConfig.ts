@@ -5,9 +5,12 @@ import {
   FaTools,
   FaCommentDots,
   FaDatabase,
+  FaCode,
+  FaCodeBranch,
 } from "react-icons/fa";
 import { FaBookAtlas, FaPeopleGroup } from "react-icons/fa6";
 import { TfiGithub } from "react-icons/tfi";
+import { v4 as uuidv4 } from "uuid";
 
 import AnswerNodeProperties from "./Answer/AnswerNodeProperties";
 import EndNodeProperties from "./End/EndNodeProperties";
@@ -20,6 +23,9 @@ import ToolNodeProperties from "./Tool/ToolNodeProperties";
 import CrewAINodeProperties from "./CrewAI/CrewAINodeProperties";
 import ClassifierNodeProperties from "./Classifier/ClassifierNodeProperties";
 import { LuBrainCircuit } from "react-icons/lu";
+import CodeNodeProperties from "./Code/CodeNodeProperties";
+import IfElseNodeProperties from "./IfElse/IfElseNodeProperties";
+import { LogicalOperator } from "../types";
 
 interface NodeConfigItem {
   display: string;
@@ -66,8 +72,8 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     colorScheme: "blue",
     properties: LLMNodeProperties,
     allowedConnections: {
-      sources: ["left", "right"],
-      targets: ["left", "right"],
+      sources: ["left","right"],
+      targets: ["left","right"],
     },
     initialData: {
       model: "glm-4-flash",
@@ -83,8 +89,8 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     colorScheme: "purple",
     properties: ToolNodeProperties,
     allowedConnections: {
-      sources: ["left", "right"],
-      targets: ["left", "right"],
+      sources: ["right"],
+      targets: ["left"],
     },
     initialData: {
       tools: ["Open Weather"],
@@ -122,8 +128,8 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
       kb_id: "",
     },
     allowedConnections: {
-      sources: ["left", "right"],
-      targets: ["left", "right"],
+      sources: ["right"],
+      targets: ["left"],
     },
     inputVariables: [],
     outputVariables: ["response"],
@@ -134,8 +140,8 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     colorScheme: "teal",
     properties: RetrievalToolNodeProperties,
     allowedConnections: {
-      sources: ["left", "right"],
-      targets: ["left", "right"],
+      sources: ["right"],
+      targets: ["left"],
     },
     initialData: {
       tools: [],
@@ -149,8 +155,8 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     colorScheme: "purple",
     properties: CrewAINodeProperties,
     allowedConnections: {
-      sources: ["left", "right"],
-      targets: ["left", "right"],
+      sources: ["right"],
+      targets: ["left"],
     },
     initialData: {
       agents: [],
@@ -168,8 +174,8 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     colorScheme: "pink",
     properties: ClassifierNodeProperties,
     allowedConnections: {
-      sources: ["right"],
-      targets: ["left"],
+      sources: [],
+      targets: ["input"],
     },
     outputVariables: ["class_name"],
     inputVariables: ["Input"],
@@ -190,11 +196,53 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
       answer: null,
     },
     allowedConnections: {
-      sources: ["left", "right"],
-      targets: ["left", "right"],
+      sources: ["right"],
+      targets: ["left"],
     },
     inputVariables: [],
     outputVariables: ["response"],
+  },
+  code: {
+    display: "Code Execution",
+    icon: FaCode,
+    colorScheme: "purple",
+    properties: CodeNodeProperties,
+    allowedConnections: {
+      sources: ["right"],
+      targets: ["left"],
+    },
+    outputVariables: ["code_result"],
+    inputVariables: [],
+    initialData: {
+      code: "",
+      language: "python",
+    },
+  },
+  ifelse: {
+    display: "If-Else",
+    icon: FaCodeBranch,
+    colorScheme: "purple",
+    properties: IfElseNodeProperties,
+    initialData: {
+      cases: [
+        {
+          case_id: uuidv4(),
+          logical_operator: LogicalOperator.and,
+          conditions: [],
+        },
+        {
+          case_id: "false_else",
+          logical_operator: LogicalOperator.and,
+          conditions: [],
+        },
+      ],
+    },
+    allowedConnections: {
+      sources: [],
+      targets: ["left"],
+    },
+    inputVariables: [],
+    outputVariables: ["result"],
   },
 };
 

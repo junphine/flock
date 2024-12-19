@@ -3,6 +3,7 @@ from functools import lru_cache
 from typing import Any, Dict
 
 from app.core.model_providers import model_provider_manager
+from app.models import ModelProvider, Models
 from langchain.tools import BaseTool
 from langchain.tools.retriever import create_retriever_tool
 from langchain_core.messages import AIMessage, AnyMessage
@@ -14,7 +15,8 @@ from langgraph.prebuilt import ToolNode
 
 from app.core.rag.qdrant import QdrantStore
 from app.core.tools import managed_tools
-from app.core.workflow.utils.db_utils import get_all_models_helper
+from app.core.workflow.utils.db_utils import get_all_models_helper, get_db_session
+from sqlmodel import select
 
 from .node.answer_node import AnswerNode
 from .node.input_node import InputNode
@@ -24,6 +26,8 @@ from .node.state import TeamState
 from .node.subgraph_node import SubgraphNode
 from .node.crewai_node import CrewAINode
 from .node.classifier_node import ClassifierNode
+from .node.code.code_node import CodeNode
+from .node.ifelse.ifelse_node import IfElseNode
 
 
 def create_subgraph(subgraph_config: Dict[str, Any]) -> CompiledGraph:
@@ -85,7 +89,7 @@ def get_retrieval_tool(tool_name: str, description: str, owner_id: int, kb_id: i
 tool_name_to_node_id: Dict[str, str] = {}
 
 
-def should_continue(state: TeamState) -> str:
+def should_continue_tools(state: TeamState) -> str:
     messages: list[AnyMessage] = state["messages"]
     if messages and isinstance(messages[-1], AIMessage) and messages[-1].tool_calls:
         for tool_call in messages[-1].tool_calls:
@@ -106,6 +110,15 @@ def should_continue_classifier(state: TeamState) -> str:
             if "category_id" in outputs:
                 return outputs["category_id"]
     return "default"
+
+
+def should_continue_ifelse(state: TeamState) -> str:
+    """处理 if-else 节点的条件判断"""
+    if "node_outputs" in state:
+        for node_id, outputs in state["node_outputs"].items():
+            if "result" in outputs:
+                return outputs["result"]
+    return "false_else"  # 默认返回 ELSE 分支
 
 
 def _add_classifier_conditional_edges(
@@ -146,6 +159,44 @@ def _add_classifier_conditional_edges(
     if edges_dict:
         graph_builder.add_conditional_edges(
             classifier_node_id, should_continue_classifier, edges_dict
+        )
+
+
+def _add_ifelse_conditional_edges(
+    graph_builder, ifelse_node_id: str, nodes: list, edges: list
+):
+    """处理 if-else 节点的条件边"""
+    # 获取 if-else 节点的配置
+    ifelse_node = next((node for node in nodes if node["id"] == ifelse_node_id), None)
+    if not ifelse_node:
+        return
+
+    # 构建条件边字典
+    edges_dict = {}
+
+    # 获取所有从 if-else 出发的边
+    ifelse_edges = [edge for edge in edges if edge["source"] == ifelse_node_id]
+
+    # 为每个 case 创建条件边
+    for edge in ifelse_edges:
+        target_node = next(
+            (node for node in nodes if node["id"] == edge["target"]), None
+        )
+        if target_node:
+            source_handle = edge.get("sourceHandle")
+            if source_handle:  # 如果有 sourceHandle，使用它作为路由键
+                edges_dict[source_handle] = edge["target"]
+
+    # 添加默认路径
+    default_edge = next(
+        (edge for edge in ifelse_edges if edge.get("sourceHandle") == "false"), None
+    )
+    edges_dict["false"] = default_edge["target"] if default_edge else END
+
+    # 添加条件边到图中
+    if edges_dict:
+        graph_builder.add_conditional_edges(
+            ifelse_node_id, should_continue_ifelse, edges_dict
         )
 
 
@@ -206,6 +257,10 @@ def initialize_graph(
                 _add_tool_node(graph_builder, node_id, node_type, node_data)
             elif node_type == "classifier":
                 _add_classifier_node(graph_builder, node_id, node_data)
+            elif node_type == "code":
+                _add_code_node(graph_builder, node_id, node_data)
+            elif node_type == "ifelse":
+                _add_ifelse_node(graph_builder, node_id, node_data)
 
         # Add edges
         for edge in edges:
@@ -223,6 +278,10 @@ def initialize_graph(
             _add_classifier_conditional_edges(
                 graph_builder, classifier_node_id, nodes, edges
             )
+
+        if_else_nodes = [node["id"] for node in nodes if node["type"] == "ifelse"]
+        for if_else_node_id in if_else_nodes:
+            _add_ifelse_conditional_edges(graph_builder, if_else_node_id, nodes, edges)
 
         # Set entry point and compile graph
         graph_builder.set_entry_point("InputNode")
@@ -470,7 +529,12 @@ def _add_edge(graph_builder, edge, nodes, conditional_edges):
         graph_builder.add_edge(edge["source"], edge["target"])
     elif target_node["type"] == "subgraph":
         graph_builder.add_edge(edge["source"], edge["target"])
-    # elif source_node["type"] == "classifier":   #   classifier  必定是conditional_edges  不会有普通边
+    elif source_node["type"] == "code":
+        if target_node["type"] == "end":
+            graph_builder.add_edge(edge["source"], END)
+        else:
+            graph_builder.add_edge(edge["source"], edge["target"])
+    # elif source_node["type"] == "classifier":   #   classifier  必定是conditional_edges  不会有普通边，if else node也一样
     #     if target_node["type"] == "end":
     #         graph_builder.add_edge(edge["source"], END)
     #     if edge["type"] == "default":
@@ -489,7 +553,9 @@ def _add_conditional_edges(graph_builder, conditional_edges, nodes):
             edges_dict["call_human"] = next(iter(conditions["call_human"].values()))
 
         if edges_dict != {"default": END}:
-            graph_builder.add_conditional_edges(node_id, should_continue, edges_dict)
+            graph_builder.add_conditional_edges(
+                node_id, should_continue_tools, edges_dict
+            )
 
 
 def _add_crewai_node(graph_builder, node_id, node_type, node_data):
@@ -535,26 +601,22 @@ def _add_crewai_node(graph_builder, node_id, node_type, node_data):
 def get_model_info(model_name: str) -> Dict[str, str]:
     """
     Get model information from all available models.
-
-    Args:
-        model_name: Name of the AI model
-
-    Returns:
-        Dict containing model information including provider name, base url, and api key
-
-    Raises:
-        ValueError: If the specified model is not supported
     """
-    all_models = get_all_models_helper()
-    for model in all_models.data:
-        if model.ai_model_name == model_name:
-            return {
-                "ai_model_name": model.ai_model_name,
-                "provider_name": model.provider.provider_name,
-                "base_url": model.provider.base_url,
-                "api_key": model.provider.api_key,
-            }
-    raise ValueError(f"Model {model_name} not supported now.")
+    with get_db_session() as session:
+        # 直接从数据库查询 Models 和关联的 ModelProvider
+        model = session.exec(
+            select(Models).join(ModelProvider).where(Models.ai_model_name == model_name)
+        ).first()
+
+        if not model:
+            raise ValueError(f"Model {model_name} not supported now.")
+
+        return {
+            "ai_model_name": model.ai_model_name,
+            "provider_name": model.provider.provider_name,
+            "base_url": model.provider.base_url,
+            "api_key": model.provider.decrypted_api_key,  # 现在可以使用decrypted_api_key
+        }
 
 
 def _add_classifier_node(graph_builder, node_id, node_data):
@@ -572,5 +634,34 @@ def _add_classifier_node(graph_builder, node_id, node_data):
             input=node_data.get("input", ""),
             openai_api_key=model_info["api_key"],
             openai_api_base=model_info["base_url"],
+        ).work,
+    )
+
+
+def _add_code_node(graph_builder, node_id, node_data):
+    """Add code execution node to graph"""
+    graph_builder.add_node(
+        node_id,
+        (
+            CodeNode(
+                node_id=node_id,
+                code=node_data["code"],
+                libraries=node_data.get("libraries", []),  # Optional libraries list
+                timeout=node_data.get("timeout", 30),  # Default timeout 30 seconds
+                memory_limit=node_data.get(
+                    "memory_limit", "256m"
+                ),  # Default memory limit
+            ).work
+        ),
+    )
+
+
+def _add_ifelse_node(graph_builder, node_id: str, node_data: Dict[str, Any]):
+    """Add if-else node to graph"""
+    graph_builder.add_node(
+        node_id,
+        IfElseNode(
+            node_id=node_id,
+            cases=node_data["cases"],
         ).work,
     )

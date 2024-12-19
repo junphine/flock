@@ -49,6 +49,7 @@ import type {
   ClassifierNodeData,
   CustomNode,
   FlowVisualizerProps,
+  IfElseNodeData,
 } from "../types";
 import { calculateEdgeCenter, getLayoutedElements } from "./utils";
 import SharedNodeMenu from "./SharedNodeMenu";
@@ -98,8 +99,15 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
 
   const { activeNodeName } = useWorkflowStore();
 
+  const selectedNode = useMemo(
+    () => nodes?.find((n) => n.id === selectedNodeId) || null,
+    [nodes, selectedNodeId]
+  );
+
   const nodesWithSelection = useMemo(() => {
-    return nodes?.map((node) => {
+    if (!nodes) return [];
+
+    return nodes.map((node) => {
       let isActive = node.id === activeNodeName;
 
       if (
@@ -205,10 +213,47 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
         return true;
       }
 
+      // ifelse 节点的特殊处理
+      if (sourceType === "ifelse") {
+        // 验证源连接点是否是有效的 case_id
+        const sourceCase = (sourceNode.data as IfElseNodeData).cases.find(
+          (c: { case_id: string }) => c.case_id === connection.sourceHandle
+        );
+        if (!sourceCase) return false;
+
+        // 验证目标节点的连接点
+        if (
+          connection.targetHandle &&
+          !nodeConfig[targetType].allowedConnections.targets.includes(
+            connection.targetHandle
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+
       // 目标节点是分类器的情况
       if (targetType === "classifier") {
         // 分类器只允许从左侧连入
         if (connection.targetHandle !== "input") return false;
+
+        // 验证源节点的连接点
+        if (
+          connection.sourceHandle &&
+          !nodeConfig[sourceType].allowedConnections.sources.includes(
+            connection.sourceHandle
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+
+      // 目标节点是 ifelse 的情况
+      if (targetType === "ifelse") {
+        // ifelse 只允许从左侧连入
+        if (connection.targetHandle !== "left") return false;
 
         // 验证源节点的连接点
         if (
@@ -985,9 +1030,9 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
       {/* 属性面板 */}
       {selectedNodeId && (
         <Box
-          w="330px"
-          minW="330px"
-          maxW="330px"
+          w={selectedNode?.type === "code" || selectedNode?.type === "ifelse" ? "450px" : "330px"}
+          minW={selectedNode?.type === "code" || selectedNode?.type === "ifelse" ? "450px" : "330px"}
+          maxW={selectedNode?.type === "code" || selectedNode?.type === "ifelse" ? "450px" : "330px"}
           bg="white"
           p={6}
           borderRadius="xl"
@@ -998,6 +1043,8 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
           my={2}
           position="relative"
           transition="all 0.2s"
+          maxH="calc(100vh - 64px)"
+          overflowY="auto"
         >
           <CloseButton
             onClick={closePropertiesPanel}

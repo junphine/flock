@@ -135,18 +135,18 @@ def init_modelprovider_model_db(session: Session) -> None:
         ).first()
 
         if db_provider:
-            db_provider.base_url = provider_data["base_url"]
             db_provider.icon = provider_data["icon"]
             db_provider.description = provider_data["description"]
-            session.add(db_provider)
+            if not db_provider.api_key:
+                db_provider.set_api_key(provider_data["api_key"])
         else:
             db_provider = ModelProvider(
                 provider_name=provider_data["provider_name"],
                 base_url=provider_data["base_url"],
-                api_key=provider_data["api_key"],
                 icon=provider_data["icon"],
                 description=provider_data["description"],
             )
+            db_provider.set_api_key(provider_data["api_key"])
             session.add(db_provider)
 
         session.flush()
@@ -193,9 +193,7 @@ def init_modelprovider_model_db(session: Session) -> None:
     for provider in providers:
         print(f"\nProvider: {provider.provider_name} (ID: {provider.id})")
         print(f"  Base URL: {provider.base_url}")
-        print(
-            f"  API Key: {'*' * len(provider.api_key) if provider.api_key else 'None'}"
-        )
+        print(f"  API Key: {'***************'  if provider.api_key else 'None'}")
         print(f"  Description: {provider.description}")
         models = session.exec(
             select(Models).where(Models.provider_id == provider.id).order_by(Models.id)

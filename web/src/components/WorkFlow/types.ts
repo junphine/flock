@@ -1,8 +1,4 @@
-import {
-  type DefaultEdgeOptions,
-  type Node,
-  type NodeTypes,
-} from "reactflow";
+import { type DefaultEdgeOptions, type Node, type NodeTypes } from "reactflow";
 
 import type { GraphsOut } from "@/client";
 
@@ -66,4 +62,38 @@ export interface ClassifierCategory {
 export interface ClassifierNodeData extends NodeData {
   categories: ClassifierCategory[];
   model?: string;
+}
+
+export enum LogicalOperator {
+  and = "and",
+  or = "or",
+}
+
+export enum ComparisonOperator {
+  contains = "contains",
+  notContains = "notContains",
+  startWith = "startWith",
+  endWith = "endWith",
+  equal = "equal",
+  notEqual = "notEqual",
+  empty = "empty",
+  notEmpty = "notEmpty",
+}
+
+export interface Condition {
+  id: string;
+  field: string;
+  comparison_operator: ComparisonOperator;
+  value: string;
+  compareType: "constant" | "variable";
+}
+
+export interface IfElseCase {
+  case_id: string;
+  logical_operator: LogicalOperator;
+  conditions: Condition[];
+}
+
+export interface IfElseNodeData extends NodeData {
+  cases: IfElseCase[];
 }
