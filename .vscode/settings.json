@@ -9,6 +9,16 @@
             "database": "flock",
             "username": "postgres",
             "password": "flock123456"
+        },
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "nlpteam",
+            "database": "nlpteam",
+            "username": "postgres",
+            "password": "123456"
         }
     ]
 }
