@@ -15,7 +15,7 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import ToolNode
 from psycopg import AsyncConnection
-
+from app.core.security import security_manager
 from app.core.config import settings
 from app.core.graph.members import (
     GraphLeader,
@@ -370,7 +370,7 @@ def create_hierarchical_graph(
             LeaderNode(
                 teams[leader_name].provider,
                 teams[leader_name].model,
-                teams[leader_name].openai_api_key,
+                security_manager.decrypt_api_key(teams[leader_name].openai_api_key),
                 teams[leader_name].openai_api_base,
                 teams[leader_name].temperature,
             ).delegate  # type: ignore[arg-type]
@@ -382,7 +382,7 @@ def create_hierarchical_graph(
             SummariserNode(
                 teams[leader_name].provider,
                 teams[leader_name].model,
-                teams[leader_name].openai_api_key,
+                security_manager.decrypt_api_key(teams[leader_name].openai_api_key),
                 teams[leader_name].openai_api_base,
                 teams[leader_name].temperature,
             ).summarise  # type: ignore[arg-type]
@@ -398,7 +398,7 @@ def create_hierarchical_graph(
                     WorkerNode(
                         provider=member.provider,
                         model=member.model,
-                        openai_api_key=teams[leader_name].openai_api_key,
+                        openai_api_key=security_manager.decrypt_api_key(teams[leader_name].openai_api_key),
                         openai_api_base=teams[leader_name].openai_api_base,
                         temperature=member.temperature,
                     ).work  # type: ignore[arg-type]
@@ -487,7 +487,7 @@ def create_sequential_graph(
                 SequentialWorkerNode(
                     provider=member.provider,
                     model=member.model,
-                    openai_api_key=member.openai_api_key,
+                    openai_api_key=security_manager.decrypt_api_key(member.openai_api_key),
                     openai_api_base=member.openai_api_base,
                     temperature=member.temperature,
                 ).work  # type: ignore[arg-type]
@@ -562,6 +562,7 @@ def create_chatbot_ragbot_graph(
     member = next(iter(team.values()))
     graph = StateGraph(TeamState)
     # Create a list to store member names that require human intervention before tool calling
+    
     interrupt_member_names = []
     graph.add_node(
         member.name,
@@ -570,7 +571,7 @@ def create_chatbot_ragbot_graph(
                 provider=member.provider,
                 model=member.model,
                 temperature=member.temperature,
-                openai_api_key=member.openai_api_key,
+                openai_api_key=security_manager.decrypt_api_key(member.openai_api_key),           
                 openai_api_base=member.openai_api_base,
             ).work  # type: ignore[arg-type]
         ),
@@ -639,12 +640,14 @@ async def generator(
 ) -> AsyncGenerator[Any, Any]:
     """Create the graph and stream responses as JSON."""
     formatted_messages = [
-        # Current only one message is passed - the user's query.
-        (
-            HumanMessage(content=message.content, name="user")
-            if message.type == "human"
-            else AIMessage(content=message.content)
-        )
+        HumanMessage(
+            content=[
+                {"type": "text", "text": message.content},
+                {"type": "image_url", "image_url": {"url": message.imgdata}}
+            ] if message.imgdata else message.content,
+            name="user"
+        ) if message.type == "human"
+        else AIMessage(content=message.content)
         for message in messages
     ]
 
