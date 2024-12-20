@@ -14,10 +14,14 @@ import React, { useCallback, useState, useEffect } from "react";
 import {  FaPlus, FaTrash } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import Editor from "@monaco-editor/react";
+import {loader} from "@monaco-editor/react";
 import type { OnMount } from "@monaco-editor/react";
 import type { editor as MonacoEditor } from "monaco-editor";
 
 import { VariableReference } from "../../FlowVis/variableSystem";
+
+const cdn = 'https://cdn.bootcdn.net/ajax/libs/monaco-editor/0.52.0/min/vs';
+loader.config({ paths: { 'vs': cdn }})
 
 interface ArgVariable {
   name: string;

@@ -77,6 +77,18 @@ const ModelProviderCard: React.FC<ModelCardProps> = ({ providerName }) => {
               w="40"
             />
             <Wrap spacing={2}>
+                <WrapItem >
+                  <Tag
+                    size="sm"
+                    variant="subtle"
+                    colorScheme="black"
+                    borderRadius="full"
+                  >
+                    <Text fontWeight="800">
+                      {providerName}
+                    </Text>
+                  </Tag>
+                </WrapItem>
               {allCategories.map((category, index) => (
                 <WrapItem key={index}>
                   <Tag

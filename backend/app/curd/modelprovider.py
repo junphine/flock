@@ -196,6 +196,7 @@ def sync_provider_models(
             model.categories = config_model["categories"]
             model.capabilities = config_model.get("capabilities", [])
             model.meta_ = meta_
+            session.add(model)
         else:
             # 创建新模型
             model = Models(

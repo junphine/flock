@@ -10,10 +10,128 @@ import queue
 import time
 import logging
 import base64
+import os
+import ast
 from textwrap import dedent
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class CodeExecutor:
+    """Code execution engine using python without container pooling"""
+
+    # Python 内置库，不需要安装
+    BUILTIN_LIBRARIES = {
+        "os",
+        "sys",
+        "glob",
+        "json",
+        "time",
+        "datetime",
+        "random",
+        "math",
+        "re",
+        "collections",
+        "itertools",
+        "functools",
+        "pathlib",
+        "base64",
+        "hashlib",
+        "uuid",
+        # ... 其他内置库
+    }
+
+    # 预装的第三方库
+    PREINSTALLED_LIBRARIES = {
+        "numpy",
+        "pandas",
+        "requests",
+        "python-dateutil",
+        "matplotlib",
+        # ... 其他预装的第三方库
+    }
+
+    def __init__(
+            self,
+            timeout: int = 30,
+            memory_limit: str = "256m",
+            image_tag: str = "code-interpreter:latest",
+            pool_size: int = 3,
+    ):
+        if not hasattr(self, "initialized"):
+            self.timeout = timeout
+            self.memory_limit = memory_limit
+            self.image_tag = image_tag
+            self.initialized = True
+
+    def _install_libraries(
+            self, container, libraries: List[str]
+    ) -> None:
+        """Install required libraries in container"""
+        # 过滤掉内置库和预装库
+        libraries_to_install = [
+            lib
+            for lib in libraries
+            if lib.lower() not in self.PREINSTALLED_LIBRARIES
+               and lib.lower() not in self.BUILTIN_LIBRARIES
+        ]
+
+        if libraries_to_install:
+            print(f"Installing libraries: {', '.join(libraries_to_install)}")
+            for library in libraries_to_install:
+                os.system(f"pip install --user {library}")
+        else:
+            print("All required libraries are pre-installed or built-in")
+
+    def execute(self, code: str, libraries: List[str]) -> str:
+        """Execute code in Docker container with safety measures"""
+        print(f"\nStarting code execution with {len(libraries)} libraries")
+        if libraries:
+            print(f"Required libraries: {', '.join(libraries)}")
+
+        print(f"Using container: python")
+
+        try:
+            # Install required libraries
+            self._install_libraries(None, libraries)
+            print("Libraries installed successfully")
+
+            # 使用模板创建执行脚本
+            runner_script = CodeTemplate.create_execution_script(code)
+            # 执行代码
+            global_vars = {}
+            local_vars = {}
+
+            exec(runner_script,None,local_vars)
+
+            result = local_vars.get("result")
+            if not result:
+                result_json = local_vars.get('output_json')
+                try:
+                    result = json.loads(result_json.strip())
+                    return result
+                except json.JSONDecodeError as e:
+                    print(f"JSON decode error: {e}")
+                    return result_json.strip()
+
+            print("\nCode execution result:")
+            print(result)
+            return result
+
+        except Exception as e:
+            error_msg = f"Execution error: {str(e)}"
+            print(f"\nError: {error_msg}")
+            return error_msg
+
+    def cleanup(self):
+        """清理所有资源"""
+        pass
+
+    def __del__(self):
+        """确保在对象被销毁时清理资源"""
+        self.cleanup()
 
 
 class ContainerPool:
@@ -160,7 +278,8 @@ class CodeTemplate:
             # 用户定义的函数
             {cls._code_placeholder}
             
-            import json, ast
+            import json
+            import ast
             
             def find_function_name(code):
                 tree = ast.parse(code)
@@ -201,46 +320,15 @@ class CodeTemplate:
         return script
 
 
-class CodeExecutor:
+class CodeDockerExecutor(CodeExecutor):
     """Code execution engine using Docker with container pooling"""
 
     _instance = None
     _pool = None
 
-    # Python 内置库，不需要安装
-    BUILTIN_LIBRARIES = {
-        "os",
-        "sys",
-        "glob",
-        "json",
-        "time",
-        "datetime",
-        "random",
-        "math",
-        "re",
-        "collections",
-        "itertools",
-        "functools",
-        "pathlib",
-        "base64",
-        "hashlib",
-        "uuid",
-        # ... 其他内置库
-    }
-
-    # 预装的第三方库
-    PREINSTALLED_LIBRARIES = {
-        "numpy",
-        "pandas",
-        "requests",
-        "python-dateutil",
-        "matplotlib",
-        # ... 其他预装的第三方库
-    }
-
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(CodeExecutor, cls).__new__(cls)
+            cls._instance = super(CodeDockerExecutor, cls).__new__(cls)
         return cls._instance
 
     def __init__(
@@ -376,7 +464,10 @@ class CodeNode:
         self.node_id = node_id
         self.code = code
         self.libraries = libraries or []
-        self.executor = CodeExecutor(timeout=timeout, memory_limit=memory_limit)
+        if os.environ.get('DOCKER_CONFIG') is not None:
+            self.executor = CodeDockerExecutor(timeout=timeout, memory_limit=memory_limit)
+        else:
+            self.executor = CodeExecutor(timeout=timeout, memory_limit=memory_limit)
 
     async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
         """Execute code and update state"""

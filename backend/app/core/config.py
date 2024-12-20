@@ -184,7 +184,7 @@ class Settings(BaseSettings):
     # LANGCHAIN_PROJECT: str | None = None
 
     # 用于加密API密钥的密钥 (用于 security_manager)
-    MODEL_PROVIDER_ENCRYPTION_KEY: str = ""
+    MODEL_PROVIDER_ENCRYPTION_KEY: str = "r8vjMg_KG7vK8oOO_UzHVom1LoJ16lumhL2hPIkPMdI="
 
 
 settings = Settings()  # type: ignore

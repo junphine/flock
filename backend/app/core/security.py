@@ -14,6 +14,7 @@ class SecurityManager:
         self.jwt_algorithm = "HS256"
         # Fernet加密实例
         self._key = settings.MODEL_PROVIDER_ENCRYPTION_KEY.encode() if settings.MODEL_PROVIDER_ENCRYPTION_KEY else Fernet.generate_key()
+        print('self._key=',self._key)
         self._fernet = Fernet(self._key)
 
     def create_access_token(self, subject: str | Any, expires_delta: timedelta) -> str:
@@ -63,3 +64,10 @@ verify_password = security_manager.verify_password
 get_password_hash = security_manager.get_password_hash
 generate_apikey = security_manager.generate_apikey
 generate_short_apikey = security_manager.generate_short_apikey
+
+if __name__=="__main__":
+    e = security_manager.encrypt_api_key("sk-558a1f1b9957484eb52de0ddc2f9524a")
+    print(e)
+    e = 'gAAAAABnZOL22nsjEdQ7iMou7GtAUhxAbJimn2qo6tNTAz0Q8dzMkCtUkoaXXrWNm1kJ8p3O-B4Q_NqGKWjgN5sIc1_VJkLU3Q=='
+    d = security_manager.decrypt_api_key(e)
+    print(d)

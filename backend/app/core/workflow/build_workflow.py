@@ -539,6 +539,8 @@ def _add_edge(graph_builder, edge, nodes, conditional_edges):
     #         graph_builder.add_edge(edge["source"], END)
     #     if edge["type"] == "default":
     #         graph_builder.add_edge(edge["source"], edge["target"])
+    else:
+        print('not handel edge:', str(edge))
 
 
 def _add_conditional_edges(graph_builder, conditional_edges, nodes):

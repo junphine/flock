@@ -160,7 +160,7 @@ const QwenIconLong = (props: IconProps) => (
       width="200.00"
       height="48.00"
     >
-      <g strokeWidth="2.00" fill="none" stroke-linecap="butt">
+      <g strokeWidth="2.00" fill="none" strokeLinecap="butt">
         <path
           stroke="#5554c9"
           d="&#10;  M 23.09 45.60&#10;  Q 22.69 44.48 23.54 44.10"

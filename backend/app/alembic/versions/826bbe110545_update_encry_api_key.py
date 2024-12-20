@@ -27,7 +27,9 @@ def upgrade():
     # 加密现有的API密钥
     for id, api_key in results:
         if api_key:
+            print('encry_input:',api_key)
             encrypted_key = security_manager.encrypt_api_key(api_key)
+            print('encry:',encrypted_key)
             connection.execute(
                 text('UPDATE modelprovider SET api_key = :key WHERE id = :id'),
                 {"key": encrypted_key, "id": id}
@@ -44,8 +46,9 @@ def downgrade():
     # 解密API密钥
     for id, encrypted_key in results:
         if encrypted_key:
+            print('encry:',encrypted_key)
             decrypted_key = security_manager.decrypt_api_key(encrypted_key)
             connection.execute(
                 text('UPDATE modelprovider SET api_key = :key WHERE id = :id'),
                 {"key": decrypted_key, "id": id}
-            ) 
+            )
