@@ -289,31 +289,48 @@ function KnowledgeTest() {
                 />
               </HStack>
 
-              <Textarea
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("knowledge.test.searchType.placeholder")!}
-                size="lg"
-                p={4}
-                minH="400px"
-                border="none"
-                _focus={{
-                  boxShadow: "none",
-                  borderColor: "ui.main",
-                }}
-                resize="none"
-                fontSize="sm"
-                transition="all 0.2s"
-              />
-
-              <Box position="absolute" bottom={4} right={4}>
-                <CustomButton
-                  text={t("knowledge.test.actions.search")}
-                  variant="blue"
-                  onClick={handleSearch}
-                  rightIcon={<MdBuild />}
-                  isLoading={searchMutation.isLoading}
+              <Box position="relative" minH="400px">
+                <Textarea
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("knowledge.test.searchType.placeholder")!}
+                  size="lg"
+                  p={4}
+                  pb="60px"
+                  minH="400px"
+                  border="none"
+                  _focus={{
+                    boxShadow: "none",
+                    borderColor: "ui.main",
+                  }}
+                  resize="none"
+                  fontSize="sm"
+                  transition="all 0.2s"
+                  sx={{
+                    "& ~ div": {
+                      pointerEvents: "auto",
+                    },
+                  }}
                 />
+
+                <Box
+                  position="absolute"
+                  bottom={4}
+                  right={4}
+                  bg="white"
+                  py={2}
+                  pointerEvents="auto"
+                  zIndex={2}
+                >
+                  <CustomButton
+                    text={t("knowledge.test.actions.search")}
+                    variant="blue"
+                    onClick={handleSearch}
+                    rightIcon={<MdBuild />}
+                    isLoading={searchMutation.isLoading}
+                    isDisabled={!query.trim()}
+                  />
+                </Box>
               </Box>
             </Box>
 
@@ -329,7 +346,7 @@ function KnowledgeTest() {
                 </Flex>
               )}
 
-              {searchResults?.results && (
+              {searchResults?.results && searchResults.results.length > 0 ? (
                 <VStack spacing={4} align="stretch">
                   <Text fontSize="lg" fontWeight="600" color="gray.800">
                     {t("knowledge.test.results.title")}
@@ -385,7 +402,20 @@ function KnowledgeTest() {
                     ))}
                   </SimpleGrid>
                 </VStack>
-              )}
+              ) : searchResults?.results ? (
+                <Box
+                  p={6}
+                  bg="white"
+                  borderRadius="xl"
+                  border="1px solid"
+                  borderColor="gray.100"
+                  textAlign="center"
+                >
+                  <Text color="gray.600">
+                    {t("knowledge.test.results.noResults")}
+                  </Text>
+                </Box>
+              ) : null}
             </Box>
 
             {isOptionsVisible && (

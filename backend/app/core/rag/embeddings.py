@@ -5,7 +5,7 @@ from typing import List
 import requests
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.embeddings import Embeddings
-from langchain_core.pydantic_v1 import BaseModel, Extra
+from pydantic import BaseModel
 from langchain_openai import OpenAIEmbeddings
 from sqlmodel import select
 
@@ -25,8 +25,9 @@ def get_api_key(provider_name: str) -> str:
         ).first()
         if not provider:
             raise ValueError(f"Provider {provider_name} not found")
+        print("aaaaaaa",provider.decrypted_api_key)
         return provider.decrypted_api_key
-
+    print("bbbbbbb",db_operation(_get_api_key))
     return db_operation(_get_api_key)
 
 
@@ -75,7 +76,7 @@ class ZhipuAIEmbeddings(BaseModel, Embeddings):
         self.dimension = get_embedding_dimension("zhipuai", self.model)
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         from zhipuai import ZhipuAI
@@ -101,7 +102,7 @@ class SiliconFlowEmbeddings(BaseModel, Embeddings):
         self.dimension = get_embedding_dimension("siliconflow", self.model)
 
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         url = "https://api.siliconflow.cn/v1/embeddings"
