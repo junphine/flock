@@ -29,6 +29,9 @@ import {
 } from "react-icons/fa";
 import { GrFormNextLink } from "react-icons/gr";
 import { VscSend } from "react-icons/vsc";
+import { throttle } from "lodash";
+
+import "katex/dist/katex.min.css";
 
 import useWorkflowStore from "@/stores/workflowStore";
 
@@ -57,6 +60,9 @@ const MessageBox = ({ message, onResume, isPlayground }: MessageBoxProps) => {
   const { isOpen: showClipboardIcon, onOpen, onClose } = useDisclosure();
   const { activeNodeName } = useWorkflowStore();
 
+  const [userScrolling, setUserScrolling] = useState(false);
+  const scrollTimeout = useRef<NodeJS.Timeout>();
+
   const onDecisionHandler = (decision: InterruptDecision) => {
     setDecision(decision);
     onResume(decision, toolMessage);
@@ -65,32 +71,74 @@ const MessageBox = ({ message, onResume, isPlayground }: MessageBoxProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (type === "ai" || type === "tool") {
+      setUserScrolling(false);
+    }
+  }, [message, type]);
+
   useLayoutEffect(() => {
     const scrollToBottom = () => {
       if (contentRef.current) {
         const parentElement = contentRef.current.parentElement;
-        if (parentElement) {
-          parentElement.scrollTop = parentElement.scrollHeight;
+        if (parentElement && !userScrolling) {
+          requestAnimationFrame(() => {
+            parentElement.scrollTop = parentElement.scrollHeight;
+          });
         }
       }
     };
 
-    scrollToBottom();
+    if (type === "ai" || type === "tool") {
+      scrollToBottom();
+    }
 
-    const observer = new MutationObserver(scrollToBottom);
+    const observer = new MutationObserver(() => {
+      if (!userScrolling || type === "ai" || type === "tool") {
+        scrollToBottom();
+      }
+    });
 
     if (contentRef.current) {
       observer.observe(contentRef.current, {
         childList: true,
         subtree: true,
         characterData: true,
+        attributes: false,
       });
     }
 
     return () => {
       observer.disconnect();
     };
-  }, [content, tool_calls, tool_output, documents]);
+  }, [content, tool_calls, tool_output, documents, userScrolling, type]);
+
+  useEffect(() => {
+    const parent = contentRef.current?.parentElement;
+    if (!parent) return;
+
+    const throttledScrollHandler = throttle(() => {
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+
+      const isScrolledToBottom =
+        Math.abs(parent.scrollHeight - parent.scrollTop - parent.clientHeight) <
+        10;
+
+      setUserScrolling(!isScrolledToBottom);
+
+      if (isScrolledToBottom) {
+        setUserScrolling(false);
+      }
+    }, 100);
+
+    parent.addEventListener("scroll", throttledScrollHandler);
+    return () => {
+      throttledScrollHandler.cancel();
+      parent.removeEventListener("scroll", throttledScrollHandler);
+    };
+  }, []);
 
   const [timestamp, setTimestamp] = useState<string>("");
 
@@ -149,6 +197,10 @@ const MessageBox = ({ message, onResume, isPlayground }: MessageBoxProps) => {
         },
         scrollBehavior: "smooth",
         overscrollBehavior: "contain",
+        willChange: "transform",
+        transform: "translateZ(0)",
+        backfaceVisibility: "hidden",
+        perspective: 1000,
       }}
     >
       <Box
