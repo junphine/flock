@@ -1,26 +1,27 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import List, Any
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+from sqlmodel import select
 
 from app.api.deps import SessionDep
+from app.core.model_providers.model_provider_manager import model_provider_manager
 from app.curd.modelprovider import (
     create_model_provider,
     delete_model_provider,
     get_model_provider,
     get_model_provider_list_with_models,
     get_model_provider_with_models,
-    update_model_provider,
     sync_provider_models,
+    update_model_provider,
 )
 from app.models import (
     ModelProvider,
     ModelProviderCreate,
+    ModelProviderOut,
     ModelProviderUpdate,
     ModelProviderWithModelsListOut,
     ProvidersListWithModelsOut,
-    ModelProviderOut,
 )
-from app.core.model_providers.model_provider_manager import model_provider_manager
-from sqlmodel import select
 
 router = APIRouter()
 
@@ -109,7 +110,7 @@ def delete_provider(model_provider_id: int, session: SessionDep):
 
 
 # 新增：同步提供者的模型配置到数据库
-@router.post("/{provider_name}/sync", response_model=List[str])
+@router.post("/{provider_name}/sync", response_model=list[str])
 async def sync_provider(
     provider_name: str,
     session: SessionDep,
@@ -121,19 +122,19 @@ async def sync_provider(
     provider = session.exec(
         select(ModelProvider).where(ModelProvider.provider_name == provider_name)
     ).first()
-    
+
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
-    
+
     # 获取提供者的配置��型
     config_models = model_provider_manager.get_supported_models(provider_name)
     if not config_models:
         raise HTTPException(
-            status_code=404, 
-            detail=f"No models found in configuration for provider {provider_name}"
+            status_code=404,
+            detail=f"No models found in configuration for provider {provider_name}",
         )
-    
+
     # 同步模型到数据库
     synced_models = sync_provider_models(session, provider.id, config_models)
-    
+
     return [model.ai_model_name for model in synced_models]

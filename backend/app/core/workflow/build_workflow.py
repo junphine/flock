@@ -1,6 +1,6 @@
 import time
-from functools import lru_cache
-from typing import Any, Dict
+from functools import cache
+from typing import Any
 
 from langchain.tools import BaseTool
 from langchain.tools.retriever import create_retriever_tool
@@ -14,21 +14,20 @@ from langgraph.prebuilt import ToolNode
 from app.core.rag.qdrant import QdrantStore
 from app.core.tools import managed_tools
 
-
+from ..state import WorkflowTeamState
 from .node.answer_node import AnswerNode
+from .node.classifier_node import ClassifierNode
+from .node.code.code_node import CodeNode
+from .node.crewai_node import CrewAINode
+from .node.ifelse.ifelse_node import IfElseNode
 from .node.input_node import InputNode
 from .node.llm_node import LLMNode
 from .node.retrieval_node import RetrievalNode
-from .node.state import TeamState
 from .node.subgraph_node import SubgraphNode
-from .node.crewai_node import CrewAINode
-from .node.classifier_node import ClassifierNode
-from .node.code.code_node import CodeNode
-from .node.ifelse.ifelse_node import IfElseNode
 
 
-def create_subgraph(subgraph_config: Dict[str, Any]) -> CompiledGraph:
-    subgraph_builder = StateGraph(TeamState)
+def create_subgraph(subgraph_config: dict[str, Any]) -> CompiledGraph:
+    subgraph_builder = StateGraph(WorkflowTeamState)
 
     # 添加subgraph的节点
     for node in subgraph_config["nodes"]:
@@ -63,12 +62,12 @@ def create_subgraph(subgraph_config: Dict[str, Any]) -> CompiledGraph:
     return subgraph_builder.compile()
 
 
-def validate_config(config: Dict[str, Any]) -> bool:
+def validate_config(config: dict[str, Any]) -> bool:
     required_keys = ["id", "name", "nodes", "edges", "metadata"]
     return all(key in config for key in required_keys)
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_tool(tool_name: str) -> BaseTool:
     for _, tool in managed_tools.items():
         if tool.display_name == tool_name:
@@ -76,17 +75,17 @@ def get_tool(tool_name: str) -> BaseTool:
     raise ValueError(f"Unknown tool: {tool_name}")
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_retrieval_tool(tool_name: str, description: str, owner_id: int, kb_id: int):
     retriever = QdrantStore().retriever(owner_id, kb_id)
     return create_retriever_tool(retriever, name=tool_name, description=description)
 
 
 # 添加一个全局变量来存储工具名称到节点ID的映射
-tool_name_to_node_id: Dict[str, str] = {}
+tool_name_to_node_id: dict[str, str] = {}
 
 
-def should_continue_tools(state: TeamState) -> str:
+def should_continue_tools(state: WorkflowTeamState) -> str:
     messages: list[AnyMessage] = state["messages"]
     if messages and isinstance(messages[-1], AIMessage) and messages[-1].tool_calls:
         for tool_call in messages[-1].tool_calls:
@@ -100,7 +99,7 @@ def should_continue_tools(state: TeamState) -> str:
     return "default"
 
 
-def should_continue_classifier(state: TeamState) -> str:
+def should_continue_classifier(state: WorkflowTeamState) -> str:
     """专门处理分类器节点的条件判断"""
     if "node_outputs" in state:
         for node_id, outputs in state["node_outputs"].items():
@@ -109,7 +108,7 @@ def should_continue_classifier(state: TeamState) -> str:
     return "default"
 
 
-def should_continue_ifelse(state: TeamState) -> str:
+def should_continue_ifelse(state: WorkflowTeamState) -> str:
     """处理 if-else 节点的条件判断"""
     if "node_outputs" in state:
         for node_id, outputs in state["node_outputs"].items():
@@ -198,7 +197,7 @@ def _add_ifelse_conditional_edges(
 
 
 def initialize_graph(
-    build_config: Dict[str, Any],
+    build_config: dict[str, Any],
     checkpointer: BaseCheckpointSaver,
     save_graph_img=False,
 ) -> CompiledGraph:
@@ -208,7 +207,7 @@ def initialize_graph(
         raise ValueError("Invalid configuration structure")
 
     try:
-        graph_builder = StateGraph(TeamState)
+        graph_builder = StateGraph(WorkflowTeamState)
         nodes = build_config["nodes"]
         edges = build_config["edges"]
 
@@ -333,7 +332,7 @@ def _determine_graph_type(nodes, edges):
             edge["source"] == node["id"] and edge["target"] == next_node["id"]
             for edge in edges
         )
-        for node, next_node in zip(llm_nodes[:-1], llm_nodes[1:])
+        for node, next_node in zip(llm_nodes[:-1], llm_nodes[1:], strict=False)
     )
     is_hierarchical = len(llm_nodes) > 1 and not is_sequential
     return is_sequential, is_hierarchical
@@ -619,7 +618,7 @@ def _add_code_node(graph_builder, node_id, node_data):
     )
 
 
-def _add_ifelse_node(graph_builder, node_id: str, node_data: Dict[str, Any]):
+def _add_ifelse_node(graph_builder, node_id: str, node_data: dict[str, Any]):
     """Add if-else node to graph"""
     graph_builder.add_node(
         node_id,

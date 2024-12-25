@@ -1,11 +1,18 @@
-from typing import Any, Dict
-from app.core.workflow.utils.db_utils import get_model_info
-from langchain_core.messages import AIMessage
-from langchain_core.runnables import RunnableConfig
+from typing import Any
+
 from langchain_core.output_parsers import JsonOutputParser
-from .state import ReturnTeamState, TeamState, parse_variables, update_node_outputs
-from app.core.model_providers.model_provider_manager import model_provider_manager
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
+
+from app.core.model_providers.model_provider_manager import model_provider_manager
+from app.core.workflow.utils.db_utils import get_model_info
+
+from ...state import (
+    ReturnWorkflowTeamState,
+    WorkflowTeamState,
+    parse_variables,
+    update_node_outputs,
+)
 
 CLASSIFIER_SYSTEM_PROMPT = """
 ### Job Description
@@ -48,7 +55,7 @@ class ClassifierNode:
         self,
         node_id: str,
         model_name: str,
-        categories: list[Dict[str, str]],
+        categories: list[dict[str, str]],
         input: str = "",
     ):
         self.node_id = node_id
@@ -58,7 +65,9 @@ class ClassifierNode:
 
         self.model_info = get_model_info(model_name)
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+    async def work(
+        self, state: WorkflowTeamState, config: RunnableConfig
+    ) -> ReturnWorkflowTeamState:
         """Execute classification work"""
         if "node_outputs" not in state:
             state["node_outputs"] = {}
@@ -166,7 +175,7 @@ class ClassifierNode:
         }
         state["node_outputs"] = update_node_outputs(state["node_outputs"], new_output)
 
-        return_state: ReturnTeamState = {
+        return_state: ReturnWorkflowTeamState = {
             "node_outputs": state["node_outputs"],
         }
 

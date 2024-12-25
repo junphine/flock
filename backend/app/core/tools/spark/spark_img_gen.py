@@ -8,8 +8,8 @@ from urllib.parse import urlencode
 from wsgiref.handlers import format_date_time
 
 import requests
-from pydantic import BaseModel, Field
 from langchain.tools import StructuredTool
+from pydantic import BaseModel, Field
 
 from app.core.tools.utils import get_credential_value
 from app.core.workflow.utils.db_utils import db_operation
@@ -60,9 +60,7 @@ def assemble_ws_auth_url(request_url, method="GET", api_key="", api_secret=""):
     path = u.path
     now = datetime.now()
     date = format_date_time(mktime(now.timetuple()))
-    signature_origin = "host: {}\ndate: {}\n{} {} HTTP/1.1".format(
-        host, date, method, path
-    )
+    signature_origin = f"host: {host}\ndate: {date}\n{method} {path} HTTP/1.1"
     signature_sha = hmac.new(
         api_secret.encode("utf-8"),
         signature_origin.encode("utf-8"),
@@ -146,6 +144,6 @@ spark_img_generation = StructuredTool.from_function(
     func=img_generation,
     name="Spark Image Generation",
     description="Spark Image Generation is a tool that can generate images from text prompts using the Spark API.",
-    args_schema=Text2ImageInput,  
+    args_schema=Text2ImageInput,
     return_direct=True,
 )

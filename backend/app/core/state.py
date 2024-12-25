@@ -1,7 +1,7 @@
 import re
-from typing import Annotated, Any, Dict
+from typing import Annotated, Any
 
-from langchain_core.messages import AnyMessage, AIMessage,ToolMessage
+from langchain_core.messages import AIMessage, AnyMessage, ToolMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph import add_messages
 from pydantic import BaseModel, Field
@@ -48,10 +48,6 @@ class GraphPerson(BaseModel):
     provider: str = Field(description="The provider for the llm model")
     model: str = Field(description="The llm model to use for this person")
 
-    api_key: str = Field(description="The api key")
-
-    base_url: str = Field(description="The base url")
-
     temperature: float = Field(description="The temperature of the llm model")
     backstory: str = Field(
         description="Description of the person's experience, motives and concerns."
@@ -89,9 +85,6 @@ class GraphTeam(BaseModel):
     provider: str = Field(description="The provider of the team leader's llm model")
     model: str = Field(description="The llm model to use for this team leader")
 
-    api_key: str = Field(description="The api key")
-
-    base_url: str = Field(description="The base url")
     temperature: float = Field(
         description="The temperature of the team leader's llm model"
     )
@@ -116,12 +109,16 @@ def format_messages(messages: list[AnyMessage]) -> str:
     message_str: str = ""
     for message in messages:
         # 确定消息名称
-        name = message.name if message.name else (
-            "AI" if isinstance(message, AIMessage) else
-            "Tool" if isinstance(message, ToolMessage) else
-            "User"
+        name = (
+            message.name
+            if message.name
+            else (
+                "AI"
+                if isinstance(message, AIMessage)
+                else "Tool" if isinstance(message, ToolMessage) else "User"
+            )
         )
-        
+
         # 处理消息内容为列表的情况（包含图片的消息）
         if isinstance(message.content, list):
             # 提取所有文本内容
@@ -135,14 +132,14 @@ def format_messages(messages: list[AnyMessage]) -> str:
             content = " ".join(text_contents)
         else:
             content = message.content
-            
+
         message_str += f"{name}: {content}\n\n"
     return message_str
 
 
 def update_node_outputs(
-    node_outputs: Dict[str, Any], new_outputs: Dict[str, Any]
-) -> Dict[str, Any]:
+    node_outputs: dict[str, Any], new_outputs: dict[str, Any]
+) -> dict[str, Any]:
     """Update node_outputs with new outputs. If new_outputs is empty, return the original node_outputs."""
     if not new_outputs:
         return node_outputs
@@ -150,7 +147,7 @@ def update_node_outputs(
         return {**node_outputs, **new_outputs}
 
 
-class TeamState(TypedDict):
+class WorkflowTeamState(TypedDict):
     all_messages: Annotated[list[AnyMessage], add_messages]
     messages: Annotated[list[AnyMessage], add_or_replace_messages]
     history: Annotated[list[AnyMessage], add_messages]
@@ -158,21 +155,21 @@ class TeamState(TypedDict):
     next: str
     main_task: list[AnyMessage]
     task: list[AnyMessage]
-    node_outputs: Annotated[Dict[str, Any], update_node_outputs]  # 修改这一行
+    node_outputs: Annotated[dict[str, Any], update_node_outputs]  # 修改这一行
 
 
 # When returning teamstate, is it possible to exclude fields that you dont want to update
-class ReturnTeamState(TypedDict):
+class ReturnWorkflowTeamState(TypedDict):
     all_messages: NotRequired[list[AnyMessage]]
     messages: NotRequired[list[AnyMessage]]
     history: NotRequired[list[AnyMessage]]
     team: NotRequired[GraphTeam]
     next: NotRequired[str | None]  # Returning None is valid for sequential graphs only
     task: NotRequired[list[AnyMessage]]
-    node_outputs: Annotated[Dict[str, Any], update_node_outputs]
+    node_outputs: Annotated[dict[str, Any], update_node_outputs]
 
 
-def parse_variables(text: str, node_outputs: Dict, is_code: bool = False) -> str:
+def parse_variables(text: str, node_outputs: dict, is_code: bool = False) -> str:
     def replace_variable(match):
         var_path = match.group(1).split(".")
         value = node_outputs
@@ -181,7 +178,7 @@ def parse_variables(text: str, node_outputs: Dict, is_code: bool = False) -> str
                 value = value[key]
             else:
                 return match.group(0)  # 如果找不到变量，保持原样
-        
+
         # 转换全角字符为半角字符
         def convert_fullwidth_to_halfwidth(s: str) -> str:
             # 全角字符范围是 0xFF01 到 0xFF5E
@@ -194,8 +191,8 @@ def parse_variables(text: str, node_outputs: Dict, is_code: bool = False) -> str
                     result.append(chr(code - 0xFEE0))
                 else:
                     result.append(char)
-            return ''.join(result)
-        
+            return "".join(result)
+
         str_value = str(value)
         if is_code:
             # 对于代码中的字符串，需要转换全角字符并正确转义
