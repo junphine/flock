@@ -12,11 +12,13 @@ import {
 } from "@chakra-ui/react";
 import type React from "react";
 import { GrNewWindow } from "react-icons/gr";
-import { RiImageAddLine } from "react-icons/ri";
 import { VscSend } from "react-icons/vsc";
+import { useRef } from "react";
+import ImageUploadModal from "./ImageUploadPopoverMenu";
+import { useTranslation } from "react-i18next";
 
 interface MessageInputProps {
-  isPlayground?:boolean;
+  isPlayground?: boolean;
   input: string;
   setInput: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -36,23 +38,22 @@ const MessageInput: React.FC<MessageInputProps> = ({
   imageData,
   setImageData,
 }) => {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageData!(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-    e.target.value = "";
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { t } = useTranslation();
+
+  const handleImageSelect = (imageData: string) => {
+    setImageData(imageData);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
   };
 
-  const removeImage = () => {
-    setImageData!(null);
-    const fileInput = document.getElementById("file-input") as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
+  const handleNewChat = () => {
+    if (newChatHandler) {
+      newChatHandler();
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
     }
   };
 
@@ -70,7 +71,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     <Box
       display="flex"
       flexDirection="column"
-      px={isPlayground?"6":"0"}
+      px={isPlayground ? "6" : "0"}
       // px="6"
       pt="2"
       pb="6"
@@ -100,7 +101,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
               size="sm"
               bg="blackAlpha.300"
               color="white"
-              onClick={removeImage}
+              onClick={() => setImageData(null)}
               _hover={{
                 bg: "blackAlpha.400",
                 transform: "rotate(90deg)",
@@ -123,7 +124,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
           w="full"
         >
           <Textarea
-            placeholder="Input your message ..."
+            ref={textareaRef}
+            placeholder={t("components.messageInput.placeholder") as string}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -141,6 +143,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
               border: "none",
             }}
             pb="50px"
+            sx={{
+              "&:focus ~ div": {
+                pointerEvents: "auto",
+              },
+            }}
           />
 
           <HStack
@@ -154,18 +161,25 @@ const MessageInput: React.FC<MessageInputProps> = ({
             justifyContent="space-between"
             borderTop="1px solid"
             borderColor="gray.100"
+            zIndex="1"
+            pointerEvents="auto"
           >
             <Text fontSize="xs" color="gray.500">
-              ↵ 发送 / ^ ↵ 换行
+              {t("components.messageInput.shortcuts.send")} /{" "}
+              {t("components.messageInput.shortcuts.newLine")}
             </Text>
 
             <HStack spacing={2}>
               {newChatHandler && (
-                <Tooltip label="New Chat" fontSize="md" bg="gray.700">
+                <Tooltip
+                  label={t("components.messageInput.tooltips.newChat")}
+                  fontSize="md"
+                  bg="gray.700"
+                >
                   <IconButton
                     aria-label="new chat"
                     icon={<GrNewWindow />}
-                    onClick={newChatHandler}
+                    onClick={handleNewChat}
                     size="sm"
                     variant="ghost"
                     transition="all 0.2s"
@@ -177,25 +191,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 </Tooltip>
               )}
 
-              <Tooltip label="Upload Image" fontSize="md" bg="gray.700">
-                <IconButton
-                  aria-label="upload-image"
-                  icon={<RiImageAddLine />}
-                  onClick={() => document.getElementById("file-input")?.click()}
-                  size="sm"
-                  variant="ghost"
-                  transition="all 0.2s"
-                  _hover={{
-                    transform: "translateY(-1px)",
-                    bg: "gray.100",
-                  }}
-                />
+              <Tooltip
+                label={t("components.messageInput.tooltips.uploadImage")}
+                fontSize="md"
+                bg="gray.700"
+              >
+                <Box>
+                  <ImageUploadModal onImageSelect={handleImageSelect} />
+                </Box>
               </Tooltip>
 
               <IconButton
                 type="submit"
                 icon={<VscSend />}
-                aria-label="send-question"
+                aria-label={t("components.messageInput.tooltips.send")}
                 isLoading={isStreaming}
                 isDisabled={!input.trim().length && !imageData}
                 size="sm"
@@ -209,14 +218,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </HStack>
           </HStack>
         </Box>
-
-        <input
-          type="file"
-          id="file-input"
-          accept="image/*"
-          style={{ display: "none" }}
-          onChange={handleFileChange}
-        />
       </InputGroup>
     </Box>
   );

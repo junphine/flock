@@ -31,18 +31,27 @@ def convert_checkpoint_tuple_to_messages(
     )
     formatted_messages: list[ChatResponse] = []
     for message in all_messages:
-        if (
-            isinstance(message, HumanMessage)
-            and message.id
-            and message.name
-            and isinstance(message.content, str)
-        ):
+        if isinstance(message, HumanMessage):
+            content = ""
+            imgdata = None
+
+            if isinstance(message.content, list):
+                for c in message.content:
+                    if isinstance(c, dict):
+                        if c.get("type") == "text":
+                            content += c.get("text", "")
+                        elif c.get("type") == "image_url":
+                            imgdata = c.get("image_url", {}).get("url")
+            else:
+                content = message.content
+
             formatted_messages.append(
                 ChatResponse(
                     type="human",
                     id=message.id,
                     name=message.name,
-                    content=message.content,
+                    content=content,
+                    imgdata=imgdata,
                 )
             )
         elif (
@@ -87,7 +96,7 @@ def convert_checkpoint_tuple_to_messages(
     if last_message.type == "ai" and last_message.tool_calls:
         # Check if any tool in last message is asking for human input
         for tool_call in last_message.tool_calls:
-            if tool_call["name"] == "ask_human":
+            if tool_call["name"] == "ask-human":
                 formatted_messages.append(
                     ChatResponse(
                         type="interrupt",

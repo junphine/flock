@@ -1,13 +1,10 @@
-import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import {
   Button,
-  ButtonGroup,
   Checkbox,
   FormControl,
   FormErrorMessage,
   FormHelperText,
   FormLabel,
-  IconButton,
   Input,
   Modal,
   ModalBody,
@@ -445,35 +442,6 @@ export function EditFlowMember({
                 );
               }}
             />
-            {modelProvider !== "openai" && (
-              <FormControl mt={2} isInvalid={!!errors.openai_api_base}>
-                <FormLabel htmlFor="model">Proxy Provider</FormLabel>
-                <Input
-                  id="openai_api_base"
-                  {...register("openai_api_base")}
-                  placeholder="Base URL"
-                />
-              </FormControl>
-            )}
-
-            <FormControl mt={2} isRequired isInvalid={!!errors.openai_api_key}>
-              <FormLabel htmlFor="openai_api_key">OpenAI API Key</FormLabel>
-              <Input
-                id="openai_api_key"
-                {...register("openai_api_key", { required: true })}
-                type={showPassword ? "text" : "password"}
-              />
-              <ButtonGroup size="sm" position="absolute" right="4" top="8">
-                <IconButton
-                  aria-label="Show password"
-                  icon={showPassword ? <ViewIcon /> : <ViewOffIcon />}
-                  onClick={() => setShowPassword(!showPassword)}
-                />
-              </ButtonGroup>
-              <FormErrorMessage>
-                {errors.openai_api_key?.message}
-              </FormErrorMessage>
-            </FormControl>
 
             <Controller
               control={control}

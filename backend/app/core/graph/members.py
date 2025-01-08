@@ -1,7 +1,6 @@
 from collections.abc import Mapping, Sequence
 from typing import Annotated, Any
 
-from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, AnyMessage
 from langchain_core.output_parsers.openai_tools import JsonOutputKeyToolsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -11,126 +10,22 @@ from langchain_core.runnables import (
     RunnableSerializable,
 )
 from langchain_core.tools import BaseTool
-from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langgraph.graph import add_messages
-from pydantic import BaseModel, Field
 from typing_extensions import NotRequired, TypedDict
 
-from app.core.rag.qdrant import QdrantStore
-from app.core.tools import managed_tools
-from app.core.tools.api_tool import dynamic_api_tool
-from app.core.tools.retriever_tool import create_retriever_tool_custom_modified
+from app.core.model_providers.model_provider_manager import model_provider_manager
+from app.core.state import (
+    GraphLeader,
+    GraphMember,
+    GraphTeam,
+    add_or_replace_messages,
+    format_messages,
+)
+from app.core.workflow.utils.db_utils import get_model_info
 
 
-class GraphSkill(BaseModel):
-    name: str = Field(description="The name of the skill")
-    definition: dict[str, Any] | None = Field(
-        description="The skill definition. For api tool calling. Optional."
-    )
-    managed: bool = Field("Whether the skill is managed or user created.")
-
-    @property
-    def tool(self) -> BaseTool:
-        if self.managed:
-            return managed_tools[self.name].tool
-        elif self.definition:
-            return dynamic_api_tool(self.definition)
-        else:
-            raise ValueError("Skill is not managed and no definition provided.")
-
-
-class GraphUpload(BaseModel):
-    name: str = Field(description="Name of the upload")
-    description: str = Field(description="Description of the upload")
-    owner_id: int = Field(description="Id of the user that owns this upload")
-    upload_id: int = Field(description="Id of the upload")
-
-    @property
-    def tool(self) -> BaseTool:
-        qdrant_store = QdrantStore()
-        retriever = qdrant_store.retriever(self.owner_id, self.upload_id)
-        return create_retriever_tool_custom_modified(retriever)
-
-
-class GraphPerson(BaseModel):
-    name: str = Field(description="The name of the person")
-    role: str = Field(description="Role of the person")
-    provider: str = Field(description="The provider for the llm model")
-    model: str = Field(description="The llm model to use for this person")
-
-    openai_api_key: str = Field(description="The openai_api_key")
-
-    openai_api_base: str = Field(description="The openai_api_base")
-
-    temperature: float = Field(description="The temperature of the llm model")
-    backstory: str = Field(
-        description="Description of the person's experience, motives and concerns."
-    )
-
-    @property
-    def persona(self) -> str:
-        return f"<persona>\nName: {self.name}\nRole: {self.role}\nBackstory: {self.backstory}\n</persona>"
-
-
-class GraphMember(GraphPerson):
-    tools: list[GraphSkill | GraphUpload] = Field(
-        description="The list of tools that the person can use."
-    )
-    interrupt: bool = Field(
-        default=False,
-        description="Whether to interrupt the person or not before skill use",
-    )
-
-
-# Create a Leader class so we can pass leader as a team member for team within team
-class GraphLeader(GraphPerson):
-    pass
-
-
-class GraphTeam(BaseModel):
-    name: str = Field(description="The name of the team")
-    role: str = Field(description="Role of the team leader")
-    backstory: str = Field(
-        description="Description of the team leader's experience, motives and concerns."
-    )
-    members: dict[str, GraphMember | GraphLeader] = Field(
-        description="The members of the team"
-    )
-    provider: str = Field(description="The provider of the team leader's llm model")
-    model: str = Field(description="The llm model to use for this team leader")
-
-    openai_api_key: str = Field(description="The openai_api_key")
-
-    openai_api_base: str = Field(description="The openai_api_base")
-    temperature: float = Field(
-        description="The temperature of the team leader's llm model"
-    )
-
-    @property
-    def persona(self) -> str:
-        return f"Name: {self.name}\nRole: {self.role}\nBackstory: {self.backstory}\n"
-
-
-def add_or_replace_messages(
-    messages: list[AnyMessage], new_messages: list[AnyMessage]
-) -> list[AnyMessage]:
-    """Add new messages to the state. If new_messages list is empty, clear messages instead."""
-    if not new_messages:
-        return []
-    else:
-        return add_messages(messages, new_messages)  # type: ignore[return-value, arg-type]
-
-
-def format_messages(messages: list[AnyMessage]) -> str:
-    """Format list of messages to string"""
-    message_str: str = ""
-    for message in messages:
-        message_str += f"{message.name}: {message.content}\n\n"
-    return message_str
-
-
-class TeamState(TypedDict):
+class GraphTeamState(TypedDict):
     all_messages: Annotated[
         list[AnyMessage], add_messages
     ]  # Stores all messages in this thread
@@ -145,7 +40,7 @@ class TeamState(TypedDict):
 
 
 # When returning teamstate, is it possible to exclude fields that you dont want to update
-class ReturnTeamState(TypedDict):
+class ReturnGraphTeamState(TypedDict):
     all_messages: NotRequired[list[AnyMessage]]
     messages: NotRequired[list[AnyMessage]]
     history: NotRequired[list[AnyMessage]]
@@ -159,74 +54,29 @@ class BaseNode:
         self,
         provider: str,
         model: str,
-        openai_api_key: str,
-        openai_api_base: str,
         temperature: float,
     ):
+        try:
+            self.model_info = get_model_info(model)
+            self.model = model_provider_manager.init_model(
+                provider_name=provider,
+                model=model,
+                temperature=temperature,
+                api_key=self.model_info["api_key"],
+                base_url=self.model_info["base_url"],
+            )
 
-        if provider in ["zhipuai","deepseek"] and openai_api_base:
-            self.model = ChatOpenAI(
-                model=model,
-                streaming=True,
-                openai_api_key=openai_api_key,
-                openai_api_base=openai_api_base,
-                temperature=temperature,
-            )
-            self.final_answer_model = ChatOpenAI(
-                model=model,
-                streaming=True,
-                openai_api_key=openai_api_key,
-                openai_api_base=openai_api_base,
-                temperature=0,
-            )
-        elif provider in ["openai"] and openai_api_base:
-            self.model = init_chat_model(
-                model,
-                model_provider=provider,
-                base_url=openai_api_base,
-                temperature=temperature,
-            )
-            self.final_answer_model = ChatOpenAI(
+            # 初始化 final_answer_model 时使用温度为 0
+            self.final_answer_model = model_provider_manager.init_model(
+                provider_name=provider,
                 model=model,
                 temperature=0,
-                streaming=True,
-                openai_api_key=openai_api_key,
-                openai_api_base=openai_api_base,
+                api_key=self.model_info["api_key"],
+                base_url=self.model_info["base_url"],
             )
-        elif provider == "ollama":
-            self.model = ChatOllama(
-                model=model,
-                temperature=temperature,
-                base_url=(
-                    openai_api_base
-                    if openai_api_base
-                    else "http://host.docker.internal:11434"
-                ),
-            )
-            self.final_answer_model = ChatOllama(
-                model=model,
-                temperature=0,
-                streaming=True,
-                openai_api_key=openai_api_key,
-                openai_api_base=openai_api_base,
-            )
-        else:
-            self.model = init_chat_model(
-                model,
-                model_provider=provider,
-                temperature=temperature,
-                streaming=True,
-                openai_api_key=openai_api_key,
-                openai_api_base=openai_api_base,
-            )
-            self.final_answer_model = init_chat_model(
-                model,
-                model_provider=provider,
-                temperature=temperature,
-                streaming=True,
-                openai_api_key=openai_api_key,
-                openai_api_base=openai_api_base,
-            )
+
+        except ValueError:
+            raise ValueError(f"Model {model} is not supported as a chat model.")
 
     def tag_with_name(self, ai_message: AIMessage, name: str) -> AIMessage:
         """Tag a name to the AI message"""
@@ -238,6 +88,32 @@ class BaseNode:
     ) -> str:
         """Get the names of all team members as a string"""
         return ",".join(list(team_members))
+
+    async def _handle_messages(
+        self,
+        state: dict[str, Any],
+        config: RunnableConfig,
+        chain: RunnableSerializable[Any, Any],
+    ) -> AIMessage:
+        """Handle both regular messages and image messages in a unified way"""
+        all_messages = state.get("all_messages", [])
+
+        if (
+            all_messages
+            and isinstance(all_messages[-1].content, list)
+            and any(
+                isinstance(item, dict)
+                and "type" in item
+                and item["type"] in ["text", "image_url"]
+                for item in all_messages[-1].content
+            )
+        ):
+            from langchain_core.messages import HumanMessage
+
+            temp_state = [HumanMessage(content=all_messages[-1].content, name="user")]
+            return await self.model.ainvoke(temp_state, config)
+
+        return await chain.ainvoke(state, config)
 
 
 class WorkerNode(BaseNode):
@@ -265,7 +141,9 @@ class WorkerNode(BaseNode):
         output = agent_output["output"]
         return AIMessage(content=output)
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+    async def work(
+        self, state: GraphTeamState, config: RunnableConfig
+    ) -> ReturnGraphTeamState:
         name = state["next"]
         member = state["team"].members[name]
         assert isinstance(member, GraphMember), "member is unexpectedly not a Member"
@@ -288,7 +166,9 @@ class WorkerNode(BaseNode):
         work_chain: RunnableSerializable[dict[str, Any], Any] = chain | RunnableLambda(
             self.tag_with_name  # type: ignore[arg-type]
         ).bind(name=member.name)
-        result: AIMessage = await work_chain.ainvoke(state, config)  # type: ignore[arg-type]
+
+        result: AIMessage = await self._handle_messages(state, config, work_chain)
+
         if result.tool_calls:
             return {"messages": [result]}
         else:
@@ -332,7 +212,9 @@ class SequentialWorkerNode(WorkerNode):
         else:
             return None
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+    async def work(
+        self, state: GraphTeamState, config: RunnableConfig
+    ) -> ReturnGraphTeamState:
         team = state["team"]  # This is actually the first member masked as a team.
         name = state["next"]
         member = team.members[name]
@@ -351,9 +233,9 @@ class SequentialWorkerNode(WorkerNode):
         work_chain: RunnableSerializable[dict[str, Any], Any] = chain | RunnableLambda(
             self.tag_with_name  # type: ignore[arg-type]
         ).bind(name=member.name)
-        result: AIMessage = await work_chain.ainvoke(state, config)  # type: ignore[arg-type]
-        # if agent is calling a tool, set the next member_name to be itself. This is so that when an agent triggers a
-        # tool and the tool returns the response back, the next value will be the agent's name
+
+        result: AIMessage = await self._handle_messages(state, config, work_chain)
+
         next: str | None
         if result.tool_calls:
             next = name
@@ -444,7 +326,7 @@ class LeaderNode(BaseNode):
         }
 
     async def delegate(
-        self, state: TeamState, config: RunnableConfig
+        self, state: GraphTeamState, config: RunnableConfig
     ) -> dict[str, Any]:
         team = state["team"]  # This is the current node
         team_members_name = self.get_team_members_name(team.members)
@@ -469,7 +351,9 @@ class LeaderNode(BaseNode):
             | bind_tool
             | JsonOutputKeyToolsParser(key_name="route", first_tool_only=True)
         )
-        result: dict[str, Any] = await delegate_chain.ainvoke(state, config)
+
+        result: AIMessage = await self._handle_messages(state, config, delegate_chain)
+
         if not result or result.get("next") is None or result["next"] == "FINISH":
             return {
                 "next": "FINISH",
@@ -482,7 +366,9 @@ class LeaderNode(BaseNode):
             result["all_messages"] = tasks
             return result
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+    async def work(
+        self, state: GraphTeamState, config: RunnableConfig
+    ) -> ReturnGraphTeamState:
         # 这个方法应该包含 delegate 方法的逻辑
         return await self.delegate(state, config)
 
@@ -506,7 +392,7 @@ class SummariserNode(BaseNode):
     )
 
     async def summarise(
-        self, state: TeamState, config: RunnableConfig
+        self, state: GraphTeamState, config: RunnableConfig
     ) -> dict[str, list[AnyMessage]]:
         team = state["team"]
         team_members_name = self.get_team_members_name(team.members)
@@ -550,7 +436,9 @@ class ChatBotNode(BaseNode):
         output = agent_output["output"]
         return AIMessage(content=output)
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+    async def work(
+        self, state: GraphTeamState, config: RunnableConfig
+    ) -> ReturnGraphTeamState:
         name = state["next"]
         member = state["team"].members[name]
         assert isinstance(member, GraphMember), "member is unexpectedly not a Member"
@@ -569,7 +457,9 @@ class ChatBotNode(BaseNode):
         work_chain: RunnableSerializable[dict[str, Any], Any] = chain | RunnableLambda(
             self.tag_with_name  # type: ignore[arg-type]
         ).bind(name=member.name)
-        result: AIMessage = await work_chain.ainvoke(state, config)  # type: ignore[arg-type]
+
+        result: AIMessage = await self._handle_messages(state, config, work_chain)
+
         if result.tool_calls:
             return {"messages": [result]}
         else:
@@ -606,7 +496,9 @@ class RAGBotNode(BaseNode):
         output = agent_output["output"]
         return AIMessage(content=output)
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+    async def work(
+        self, state: GraphTeamState, config: RunnableConfig
+    ) -> ReturnGraphTeamState:
         name = state["next"]
         member = state["team"].members[name]
         assert isinstance(member, GraphMember), "member is unexpectedly not a Member"
@@ -625,7 +517,9 @@ class RAGBotNode(BaseNode):
         work_chain: RunnableSerializable[dict[str, Any], Any] = chain | RunnableLambda(
             self.tag_with_name  # type: ignore[arg-type]
         ).bind(name=member.name)
-        result: AIMessage = await work_chain.ainvoke(state, config)  # type: ignore[arg-type]
+
+        result: AIMessage = await self._handle_messages(state, config, work_chain)
+
         if result.tool_calls:
             return {"messages": [result]}
         else:

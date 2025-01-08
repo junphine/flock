@@ -4,7 +4,7 @@ import shutil
 import uuid
 from datetime import datetime
 from tempfile import NamedTemporaryFile
-from typing import IO, Annotated, Any, Dict
+from typing import IO, Annotated, Any
 
 import aiofiles
 from celery.result import AsyncResult
@@ -353,7 +353,7 @@ def delete_upload(session: SessionDep, current_user: CurrentUser, id: int) -> Me
 async def search_upload(
     upload_id: int,
     current_user: CurrentUser,
-    search_params: Dict[str, Any],
+    search_params: dict[str, Any],
     session: SessionDep,
 ):
     """

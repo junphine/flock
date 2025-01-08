@@ -6,9 +6,17 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, model_validator
 from pydantic import Field as PydanticField
-from sqlalchemy import ARRAY, JSON, Column, DateTime
+from sqlalchemy import (
+    ARRAY,
+    JSON,
+    Column,
+    DateTime,
+    PrimaryKeyConstraint,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import PrimaryKeyConstraint, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -128,15 +136,26 @@ class ChatMessageType(str, Enum):
 class ChatMessage(BaseModel):
     type: ChatMessageType
     content: str
+    imgdata: str | None = None  # 添加 imgdata 字段
 
+class InterruptType(str, Enum):
+    TOOL_REVIEW = "tool_review"
+    OUTPUT_REVIEW = "output_review"
+    CONTEXT_INPUT = "context_input"
 
-class InterruptDecision(Enum):
+class InterruptDecision(str, Enum):
     APPROVED = "approved"
     REJECTED = "rejected"
     REPLIED = "replied"
+    UPDATE = "update"
+    FEEDBACK = "feedback"
+    REVIEW = "review"
+    EDIT = "edit"
+    CONTINUE = "continue"
 
 
 class Interrupt(BaseModel):
+    interrupt_type: InterruptType | None = None
     decision: InterruptDecision
     tool_message: str | None = None
 
@@ -281,8 +300,6 @@ class MemberBase(SQLModel):
     source: int | None = None
     provider: str = ""
     model: str = ""
-    openai_api_key: str = ""
-    openai_api_base: str = "https://open.bigmodel.cn/api/paas/v4"
 
     temperature: float = 0.1
     interrupt: bool = False
@@ -304,8 +321,6 @@ class MemberUpdate(MemberBase):
     uploads: list["Upload"] | None = None
     provider: str | None = None  # type: ignore[assignment]
     model: str | None = None  # type: ignore[assignment]
-    openai_api_key: str | None = None
-    openai_api_base: str | None = None
 
     temperature: float | None = None  # type: ignore[assignment]
     interrupt: bool | None = None  # type: ignore[assignment]
@@ -483,7 +498,7 @@ class Write(SQLModel, table=True):
 class UploadBase(SQLModel):
     name: str
     description: str
-    file_type: str  # 新增字段，用于储文件类型
+    file_type: str  # 新字段，用于储文件类型
     web_url: str | None = None  # 新增字段，用于存储网页 URL
 
 
@@ -773,3 +788,6 @@ class ApiKeyOutPublic(ApiKeyBase):
 class ApiKeysOutPublic(SQLModel):
     data: list[ApiKeyOutPublic]
     count: int
+
+
+

@@ -1,10 +1,13 @@
+import secrets
 from datetime import datetime, timedelta
 from typing import Any
-import secrets
+
 import jwt
-from passlib.context import CryptContext
 from cryptography.fernet import Fernet
+from passlib.context import CryptContext
+
 from app.core.config import settings
+
 
 class SecurityManager:
     def __init__(self):
@@ -21,7 +24,9 @@ class SecurityManager:
         """创建JWT访问令牌"""
         expire = datetime.utcnow() + expires_delta
         to_encode = {"exp": expire, "sub": str(subject)}
-        encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=self.jwt_algorithm)
+        encoded_jwt = jwt.encode(
+            to_encode, settings.SECRET_KEY, algorithm=self.jwt_algorithm
+        )
         return encoded_jwt
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -54,6 +59,7 @@ class SecurityManager:
             return self._fernet.decrypt(encrypted_data.encode()).decode()
         except Exception as e:
             raise ValueError("Decryption failed,Invalid API key Token") from e
+
 
 # 创建单例实例
 security_manager = SecurityManager()

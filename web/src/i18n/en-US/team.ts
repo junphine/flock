@@ -95,6 +95,7 @@ const translation = {
         category: "Category",
         addCategory: "Add Category",
         placeholder: "Enter category name",
+        othersCategory: "Others Intent",
       },
       crewai: {
         model: "Model",
@@ -149,9 +150,49 @@ const translation = {
           equal: "Is",
           notEqual: "Is Not",
           empty: "Is Empty",
-          notEmpty: "Is Not Empty"
-        }
-      }
+          notEmpty: "Is Not Empty",
+        },
+      },
+      code: {
+        title: "Code Node",
+        inputVariables: "Input Variables",
+        variableName: "Variable Name",
+        selectVariable: "Select Variable",
+        addVariable: "Add Variable",
+        pythonCode: "Python Code",
+        executionResult: "Execution Result",
+        placeholder: {
+          variableName: "Enter variable name",
+          selectVariable: "Select variable",
+        },
+      },
+      human: {
+        nodeTitle: "Human Node",
+        interactionType: "Interaction Type",
+        types: {
+          toolReview: "Tool Call Review",
+          outputReview: "Content Review",
+          contextInput: "Additional Input",
+        },
+        title: "Title",
+        titlePlaceholder: "Please enter node title",
+        routes: "Route Configuration",
+        // Tool Review routes
+        approveRoute: "Route After Approval",
+        rejectRoute: "Route After Rejection",
+        updateRoute: "Route After Parameter Update",
+        feedbackRoute: "Route After Feedback",
+        // Output Review routes
+        reviewRoute: "Route After Review",
+        editRoute: "Route After Edit",
+        // Context Input routes
+        continueRoute: "Route After Input",
+        defaultTitles: {
+          toolReview: "Please Review Tool Call Request",
+          outputReview: "Please Review AI Generated Content",
+          contextInput: "Additional Information Needed",
+        },
+      },
     },
     common: {
       add: "Add",

@@ -1,6 +1,6 @@
 import { type DefaultEdgeOptions, type Node, type NodeTypes } from "reactflow";
 
-import type { GraphsOut } from "@/client";
+import type { GraphsOut, InterruptType } from "@/client";
 
 export interface NodeData {
   label: string;
@@ -96,4 +96,12 @@ export interface IfElseCase {
 
 export interface IfElseNodeData extends NodeData {
   cases: IfElseCase[];
+}
+
+export interface HumanNodeData extends NodeData {
+  interaction_type: InterruptType;
+  routes?: {
+    [key: string]: string;
+  };
+  title?: string;
 }

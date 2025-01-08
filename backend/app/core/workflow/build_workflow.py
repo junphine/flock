@@ -1,9 +1,7 @@
 import time
-from functools import lru_cache
-from typing import Any, Dict
+from functools import cache
+from typing import Any
 
-from app.core.model_providers import model_provider_manager
-from app.models import ModelProvider, Models
 from langchain.tools import BaseTool
 from langchain.tools.retriever import create_retriever_tool
 from langchain_core.messages import AIMessage, AnyMessage
@@ -15,23 +13,23 @@ from langgraph.prebuilt import ToolNode
 
 from app.core.rag.qdrant import QdrantStore
 from app.core.tools import managed_tools
-from app.core.workflow.utils.db_utils import get_all_models_helper, get_db_session
-from sqlmodel import select
 
+from ..state import WorkflowTeamState
 from .node.answer_node import AnswerNode
+from .node.classifier_node import ClassifierNode
+from .node.code.code_node import CodeNode
+from .node.crewai_node import CrewAINode
+from .node.ifelse.ifelse_node import IfElseNode
 from .node.input_node import InputNode
 from .node.llm_node import LLMNode
 from .node.retrieval_node import RetrievalNode
-from .node.state import TeamState
 from .node.subgraph_node import SubgraphNode
-from .node.crewai_node import CrewAINode
-from .node.classifier_node import ClassifierNode
-from .node.code.code_node import CodeNode
-from .node.ifelse.ifelse_node import IfElseNode
+from .node.human_node import HumanNode
+from app.models import InterruptDecision, InterruptType
 
 
-def create_subgraph(subgraph_config: Dict[str, Any]) -> CompiledGraph:
-    subgraph_builder = StateGraph(TeamState)
+def create_subgraph(subgraph_config: dict[str, Any]) -> CompiledGraph:
+    subgraph_builder = StateGraph(WorkflowTeamState)
 
     # 添加subgraph的节点
     for node in subgraph_config["nodes"]:
@@ -66,12 +64,12 @@ def create_subgraph(subgraph_config: Dict[str, Any]) -> CompiledGraph:
     return subgraph_builder.compile()
 
 
-def validate_config(config: Dict[str, Any]) -> bool:
+def validate_config(config: dict[str, Any]) -> bool:
     required_keys = ["id", "name", "nodes", "edges", "metadata"]
     return all(key in config for key in required_keys)
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_tool(tool_name: str) -> BaseTool:
     for _, tool in managed_tools.items():
         if tool.display_name == tool_name:
@@ -79,23 +77,21 @@ def get_tool(tool_name: str) -> BaseTool:
     raise ValueError(f"Unknown tool: {tool_name}")
 
 
-@lru_cache(maxsize=None)
+@cache
 def get_retrieval_tool(tool_name: str, description: str, owner_id: int, kb_id: int):
     retriever = QdrantStore().retriever(owner_id, kb_id)
     return create_retriever_tool(retriever, name=tool_name, description=description)
 
 
 # 添加一个全局变量来存储工具名称到节点ID的映射
-tool_name_to_node_id: Dict[str, str] = {}
+tool_name_to_node_id: dict[str, str] = {}
 
 
-def should_continue_tools(state: TeamState) -> str:
+def should_continue_tools(state: WorkflowTeamState) -> str:
     messages: list[AnyMessage] = state["messages"]
     if messages and isinstance(messages[-1], AIMessage) and messages[-1].tool_calls:
         for tool_call in messages[-1].tool_calls:
-            if tool_call["name"] == "ask_human":
-                return "call_human"
-            # 使用工具名称到节点ID的映射
+
             tool_name = tool_call["name"].lower()
             for node_id, tools in tool_name_to_node_id.items():
                 if tool_name in tools:
@@ -103,7 +99,7 @@ def should_continue_tools(state: TeamState) -> str:
     return "default"
 
 
-def should_continue_classifier(state: TeamState) -> str:
+def should_continue_classifier(state: WorkflowTeamState) -> str:
     """专门处理分类器节点的条件判断"""
     if "node_outputs" in state:
         for node_id, outputs in state["node_outputs"].items():
@@ -112,7 +108,7 @@ def should_continue_classifier(state: TeamState) -> str:
     return "default"
 
 
-def should_continue_ifelse(state: TeamState) -> str:
+def should_continue_ifelse(state: WorkflowTeamState) -> str:
     """处理 if-else 节点的条件判断"""
     if "node_outputs" in state:
         for node_id, outputs in state["node_outputs"].items():
@@ -201,7 +197,7 @@ def _add_ifelse_conditional_edges(
 
 
 def initialize_graph(
-    build_config: Dict[str, Any],
+    build_config: dict[str, Any],
     checkpointer: BaseCheckpointSaver,
     save_graph_img=False,
 ) -> CompiledGraph:
@@ -211,7 +207,7 @@ def initialize_graph(
         raise ValueError("Invalid configuration structure")
 
     try:
-        graph_builder = StateGraph(TeamState)
+        graph_builder = StateGraph(WorkflowTeamState)
         nodes = build_config["nodes"]
         edges = build_config["edges"]
 
@@ -261,6 +257,8 @@ def initialize_graph(
                 _add_code_node(graph_builder, node_id, node_data)
             elif node_type == "ifelse":
                 _add_ifelse_node(graph_builder, node_id, node_data)
+            elif node_type == "human":
+                _add_human_node(graph_builder, node_id, node_data)
 
         # Add edges
         for edge in edges:
@@ -292,6 +290,7 @@ def initialize_graph(
         interrupt_after = hitl_config.get("interrupt_after", [])
         graph = graph_builder.compile(
             checkpointer=checkpointer,
+            # interrupt_before=["tool-4"],  # 测试 interrupt ok
             interrupt_before=interrupt_before,
             interrupt_after=interrupt_after,
         )
@@ -336,7 +335,7 @@ def _determine_graph_type(nodes, edges):
             edge["source"] == node["id"] and edge["target"] == next_node["id"]
             for edge in edges
         )
-        for node, next_node in zip(llm_nodes[:-1], llm_nodes[1:])
+        for node, next_node in zip(llm_nodes[:-1], llm_nodes[1:], strict=False)
     )
     is_hierarchical = len(llm_nodes) > 1 and not is_sequential
     return is_sequential, is_hierarchical
@@ -355,7 +354,7 @@ def _create_llm_children_dict(nodes, edges):
 
 def _create_conditional_edges_dict(nodes):
     return {
-        node["id"]: {"default": {}, "call_tools": {}, "call_human": {}}
+        node["id"]: {"default": {}, "call_tools": {}, "ask-human": {}}
         for node in nodes
         if node["type"] == "llm"
     }
@@ -398,7 +397,6 @@ def _add_llm_node(
     llm_children,
 ):
     model_name = node_data["model"]
-    model_info = get_model_info(model_name)
 
     if is_sequential:
         node_class = LLMNode
@@ -421,11 +419,8 @@ def _add_llm_node(
             RunnableLambda(
                 node_class(
                     node_id,
-                    provider=model_info["provider_name"],
-                    model=model_info["ai_model_name"],
+                    model_name=model_name,
                     tools=tools_to_bind,
-                    openai_api_key=model_info["api_key"],
-                    openai_api_base=model_info["base_url"],
                     temperature=node_data["temperature"],
                     system_prompt=node_data.get("systemMessage", None),
                     agent_name=node_data.get("label", node_id),
@@ -513,6 +508,8 @@ def _add_edge(graph_builder, edge, nodes, conditional_edges):
                 )
     elif source_node["type"].startswith("tool") and target_node["type"] == "llm":
         graph_builder.add_edge(edge["source"], edge["target"])
+    elif source_node["type"].startswith("tool") and target_node["type"] == "human":
+        graph_builder.add_edge(edge["source"], edge["target"])
     elif source_node["type"] == "retrieval":
         graph_builder.add_edge(edge["source"], edge["target"])
     elif source_node["type"] == "answer":
@@ -534,13 +531,17 @@ def _add_edge(graph_builder, edge, nodes, conditional_edges):
             graph_builder.add_edge(edge["source"], END)
         else:
             graph_builder.add_edge(edge["source"], edge["target"])
-    # elif source_node["type"] == "classifier":   #   classifier  必定是conditional_edges  不会有普通边，if else node也一样
-    #     if target_node["type"] == "end":
-    #         graph_builder.add_edge(edge["source"], END)
-    #     if edge["type"] == "default":
-    #         graph_builder.add_edge(edge["source"], edge["target"])
-    else:
-        print('not handle edge:', str(edge))
+    elif source_node["type"] in [
+        "classifier",
+        "ifelse",
+    ]:  # classifier 必定是conditional_edges 不会有普通边，if else node也一样
+        if target_node["type"] == "end":
+            graph_builder.add_edge(edge["source"], END)
+    elif source_node["type"] == "human":
+        if target_node["type"] == "end":
+            graph_builder.add_edge(edge["source"], END)
+        else:
+            graph_builder.add_edge(edge["source"], edge["target"])
 
 
 def _add_conditional_edges(graph_builder, conditional_edges, nodes):
@@ -551,8 +552,8 @@ def _add_conditional_edges(graph_builder, conditional_edges, nodes):
             **conditions["call_tools"],
         }
 
-        if conditions["call_human"]:
-            edges_dict["call_human"] = next(iter(conditions["call_human"].values()))
+        if conditions["ask-human"]:
+            edges_dict["ask-human"] = next(iter(conditions["ask-human"].values()))
 
         if edges_dict != {"default": END}:
             graph_builder.add_conditional_edges(
@@ -572,20 +573,15 @@ def _add_crewai_node(graph_builder, node_id, node_type, node_data):
     if not llm_config.get("model"):
         raise ValueError("CrewAI node requires llm model configuration")
 
-    model_info = get_model_info(llm_config["model"])
-
     process_type = node_data.get("process_type", "sequential")
 
     # 创建 CrewAI 节点
     crewai_node = CrewAINode(
         node_id=node_id,
-        provider=model_info["provider_name"],
-        model=model_info["ai_model_name"],
+        model_name=llm_config["model"],
         agents_config=node_data["agents"],
         tasks_config=node_data["tasks"],
         process_type=process_type,
-        openai_api_key=model_info["api_key"],
-        openai_api_base=model_info["base_url"],
         manager_config=node_data.get("manager_config", {}),
         config=node_data.get("config", {}),
     )
@@ -600,42 +596,16 @@ def _add_crewai_node(graph_builder, node_id, node_type, node_data):
         raise ValueError("Hierarchical process requires manager agent configuration")
 
 
-def get_model_info(model_name: str) -> Dict[str, str]:
-    """
-    Get model information from all available models.
-    """
-    with get_db_session() as session:
-        # 直接从数据库查询 Models 和关联的 ModelProvider
-        model = session.exec(
-            select(Models).join(ModelProvider).where(Models.ai_model_name == model_name)
-        ).first()
-
-        if not model:
-            raise ValueError(f"Model {model_name} not supported now.")
-
-        return {
-            "ai_model_name": model.ai_model_name,
-            "provider_name": model.provider.provider_name,
-            "base_url": model.provider.base_url,
-            "api_key": model.provider.decrypted_api_key,  # 现在可以使用decrypted_api_key
-        }
-
-
 def _add_classifier_node(graph_builder, node_id, node_data):
     """Add classifier node to graph"""
-    # 获取模型信息
-    model_info = get_model_info(node_data["model"])
 
     graph_builder.add_node(
         node_id,
         ClassifierNode(
             node_id=node_id,
-            provider=model_info["provider_name"],
-            model=model_info["ai_model_name"],
+            model_name=node_data["model"],
             categories=node_data["categories"],
             input=node_data.get("input", ""),
-            openai_api_key=model_info["api_key"],
-            openai_api_base=model_info["base_url"],
         ).work,
     )
 
@@ -658,12 +628,27 @@ def _add_code_node(graph_builder, node_id, node_data):
     )
 
 
-def _add_ifelse_node(graph_builder, node_id: str, node_data: Dict[str, Any]):
+def _add_ifelse_node(graph_builder, node_id: str, node_data: dict[str, Any]):
     """Add if-else node to graph"""
     graph_builder.add_node(
         node_id,
         IfElseNode(
             node_id=node_id,
             cases=node_data["cases"],
+        ).work,
+    )
+
+
+def _add_human_node(graph_builder, node_id: str, node_data: dict[str, Any]):
+    """Add human node to graph"""
+    graph_builder.add_node(
+        node_id,
+        HumanNode(
+            node_id=node_id,
+            routes=node_data.get("routes", {}),
+            title=node_data.get("title"),
+            interaction_type=node_data.get(
+                "interaction_type", InterruptType.TOOL_REVIEW
+            ),
         ).work,
     )

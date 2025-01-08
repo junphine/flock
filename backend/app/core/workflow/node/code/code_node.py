@@ -1,19 +1,24 @@
-import json
-from typing import Any, Dict, List, Optional
-import uuid
-from langchain_core.messages import AIMessage, ToolMessage
-from langchain_core.runnables import RunnableConfig
-import docker
-from ..state import ReturnTeamState, TeamState, parse_variables, update_node_outputs
-import threading
-import queue
-import time
-import logging
 import base64
+import json
+import logging
+import queue
+import threading
+import time
+import uuid
 import os
 import ast
 from textwrap import dedent
 
+import docker
+from langchain_core.messages import ToolMessage
+from langchain_core.runnables import RunnableConfig
+
+from ....state import (
+    ReturnWorkflowTeamState,
+    WorkflowTeamState,
+    parse_variables,
+    update_node_outputs,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -277,30 +282,29 @@ class CodeTemplate:
             f"""
             # 用户定义的函数
             {cls._code_placeholder}
-            
-            import json
-            import ast
-            
+
+            import json, ast
+
             def find_function_name(code):
                 tree = ast.parse(code)
                 for node in ast.walk(tree):
                     if isinstance(node, ast.FunctionDef):
                         return node.name
                 return None
-            
+
             # 分析代码获取函数名
             code = '''{cls._code_placeholder}'''
             function_name = find_function_name(code)
-            
+
             if not function_name:
                 raise Exception("No function found in the code")
-            
+
             # 执行代码
             exec(code)
-            
+
             # 执行函数并获取结果
             result = eval(f"{{function_name}}()")
-            
+
             # 转换结果为JSON并打印
             output_json = json.dumps(result, indent=4)
             print(f'<<RESULT>>{{output_json}}<<RESULT>>')
@@ -359,7 +363,7 @@ class CodeDockerExecutor(CodeExecutor):
             self.client.images.build(path=dockerfile_path, tag=self.image_tag, rm=True)
 
     def _install_libraries(
-        self, container: docker.models.containers.Container, libraries: List[str]
+        self, container: docker.models.containers.Container, libraries: list[str]
     ) -> None:
         """Install required libraries in container"""
         # 过滤掉内置库和预装库
@@ -377,7 +381,7 @@ class CodeDockerExecutor(CodeExecutor):
         else:
             print("All required libraries are pre-installed or built-in")
 
-    def execute(self, code: str, libraries: List[str]) -> str:
+    def execute(self, code: str, libraries: list[str]) -> str:
         """Execute code in Docker container with safety measures"""
         print(f"\nStarting code execution with {len(libraries)} libraries")
         if libraries:
@@ -457,7 +461,7 @@ class CodeNode:
         self,
         node_id: str,
         code: str,
-        libraries: Optional[List[str]] = None,
+        libraries: list[str] | None = None,
         timeout: int = 30,
         memory_limit: str = "256m",
     ):
@@ -469,19 +473,22 @@ class CodeNode:
         else:
             self.executor = CodeExecutor(timeout=timeout, memory_limit=memory_limit)
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+    async def work(
+        self, state: WorkflowTeamState, config: RunnableConfig
+    ) -> ReturnWorkflowTeamState:
         """Execute code and update state"""
         if "node_outputs" not in state:
             state["node_outputs"] = {}
 
         try:
             # Parse variables in code
-            parsed_code = parse_variables(self.code, state["node_outputs"],is_code=True)
+            parsed_code = parse_variables(
+                self.code, state["node_outputs"], is_code=True
+            )
 
-        
             # Execute code
             code_execution_result = self.executor.execute(parsed_code, self.libraries)
-         
+
             if isinstance(code_execution_result, str):
                 # If code_result is a string, return it as it is
                 code_result = code_execution_result
@@ -506,7 +513,7 @@ class CodeNode:
                 state["node_outputs"], new_output
             )
 
-            return_state: ReturnTeamState = {
+            return_state: ReturnWorkflowTeamState = {
                 "history": state.get("history", []) + [result],
                 "messages": [result],
                 "all_messages": state.get("all_messages", []) + [result],
@@ -527,7 +534,7 @@ class CodeNode:
             state["node_outputs"] = update_node_outputs(
                 state["node_outputs"], new_output
             )
-            return_state: ReturnTeamState = {
+            return_state: ReturnWorkflowTeamState = {
                 "history": state.get("history", []) + [result],
                 "messages": [result],
                 "all_messages": state.get("all_messages", []) + [result],

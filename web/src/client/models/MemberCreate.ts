@@ -14,8 +14,6 @@ export type MemberCreate = {
     source?: (number | null);
     provider?: string;
     model?: string;
-    openai_api_key?: string;
-    openai_api_base?: string;
     temperature?: number;
     interrupt?: boolean;
 };

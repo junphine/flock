@@ -17,8 +17,6 @@ export type MemberUpdate = {
     source?: (number | null);
     provider?: (string | null);
     model?: (string | null);
-    openai_api_key?: (string | null);
-    openai_api_base?: (string | null);
     temperature?: (number | null);
     interrupt?: (boolean | null);
     belongs_to?: (number | null);

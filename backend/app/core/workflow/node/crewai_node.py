@@ -1,10 +1,19 @@
-from typing import Any, Dict, List
-from langchain_core.runnables import RunnableConfig
-from .state import ReturnTeamState, TeamState, update_node_outputs, parse_variables
+from typing import Any
+
+from crewai import Agent, Crew, Process, Task
 from langchain_core.messages import AIMessage
-from crewai import Agent, Crew, Task, Process
+from langchain_core.runnables import RunnableConfig
+
 from app.core.model_providers.model_provider_manager import model_provider_manager
 from app.core.tools.tool_manager import managed_tools
+from app.core.workflow.utils.db_utils import get_model_info
+
+from ...state import (
+    ReturnWorkflowTeamState,
+    WorkflowTeamState,
+    parse_variables,
+    update_node_outputs,
+)
 
 
 class CrewAINode:
@@ -15,14 +24,11 @@ Even though you don't perform tasks by yourself, you have a lot of experience in
     def __init__(
         self,
         node_id: str,
-        provider: str,
-        model: str,
-        agents_config: List[Dict[str, Any]],
-        tasks_config: List[Dict[str, Any]],
+        model_name: str,
+        agents_config: list[dict[str, Any]],
+        tasks_config: list[dict[str, Any]],
         process_type: str = "sequential",
-        openai_api_key: str = "",
-        openai_api_base: str = "",
-        manager_config: Dict[str, Any] = {},
+        manager_config: dict[str, Any] = {},
         config: dict[str, Any] = {},
     ):
         self.node_id = node_id
@@ -31,12 +37,13 @@ Even though you don't perform tasks by yourself, you have a lot of experience in
         self.process_type = process_type
         self.config = config
 
+        self.model_info = get_model_info(model_name)
         # 初始化 LLM
         self.llm = model_provider_manager.init_crewai_model(
-            provider_name=provider,
-            model=model,
-            openai_api_key=openai_api_key,
-            openai_api_base=openai_api_base,
+            provider_name=self.model_info["provider_name"],
+            model=self.model_info["ai_model_name"],
+            api_key=self.model_info["api_key"],
+            base_url=self.model_info["base_url"],
         )
 
         # Initialize manager agent for hierarchical process
@@ -51,7 +58,7 @@ Even though you don't perform tasks by yourself, you have a lot of experience in
                     "allow_delegation": True,
                 },
             )
-            
+
             # Parse variables in manager config
             if "role" in manager_agent_config:
                 manager_agent_config["role"] = parse_variables(
@@ -82,7 +89,9 @@ Even though you don't perform tasks by yourself, you have a lot of experience in
                 return tool_info.tool
         return None
 
-    def _create_agent(self, agent_config: Dict[str, Any], state: TeamState) -> Agent:
+    def _create_agent(
+        self, agent_config: dict[str, Any], state: WorkflowTeamState
+    ) -> Agent:
         """Create an agent from configuration with variable parsing"""
         tools = []
         # 从配置中获取工具列表
@@ -107,12 +116,15 @@ Even though you don't perform tasks by yourself, you have a lot of experience in
         )
 
     def _create_task(
-        self, task_config: Dict[str, Any], agents: Dict[str, Agent], state: TeamState
+        self,
+        task_config: dict[str, Any],
+        agents: dict[str, Agent],
+        state: WorkflowTeamState,
     ) -> Task:
         """Create a task from configuration with variable parsing"""
         # Parse variables in task configuration
         description = parse_variables(task_config["description"], state["node_outputs"])
-        
+
         # 确保 expected_output 始终是字符串
         expected_output = ""
         if task_config.get("expected_output"):
@@ -137,7 +149,9 @@ Even though you don't perform tasks by yourself, you have a lot of experience in
             llm=self.llm,
         )
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+    async def work(
+        self, state: WorkflowTeamState, config: RunnableConfig
+    ) -> ReturnWorkflowTeamState:
         if "node_outputs" not in state:
             state["node_outputs"] = {}
 
@@ -179,7 +193,7 @@ Even though you don't perform tasks by yourself, you have a lot of experience in
         # Create AI message from result
         crewai_res_message = AIMessage(content=str(raw_result_str))
 
-        return_state: ReturnTeamState = {
+        return_state: ReturnWorkflowTeamState = {
             "history": state.get("history", []) + [crewai_res_message],
             "messages": [crewai_res_message],
             "all_messages": state.get("all_messages", []) + [crewai_res_message],

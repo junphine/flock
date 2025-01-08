@@ -1,9 +1,11 @@
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Callable, TypeVar
+from typing import TypeVar
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.database import get_session
+from app.models import ModelProvider, Models
 
 T = TypeVar("T")
 
@@ -40,3 +42,22 @@ def get_models_by_provider_helper(provider_id: int):
 
 
 # 可以根据需要添加更多辅助函数
+def get_model_info(model_name: str) -> dict[str, str]:
+    """
+    Get model information from all available models.
+    """
+    with get_db_session() as session:
+        # 直接从数据库查询 Models 和关联的 ModelProvider
+        model = session.exec(
+            select(Models).join(ModelProvider).where(Models.ai_model_name == model_name)
+        ).first()
+
+        if not model:
+            raise ValueError(f"Model {model_name} not supported now.")
+
+        return {
+            "ai_model_name": model.ai_model_name,
+            "provider_name": model.provider.provider_name,
+            "base_url": model.provider.base_url,
+            "api_key": model.provider.decrypted_api_key,  # 现在可以使用decrypted_api_key
+        }

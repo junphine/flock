@@ -1,14 +1,14 @@
-from langchain_openai import ChatOpenAI
 from crewai import LLM
+from langchain_openai import ChatOpenAI
 
 from app.models import ModelCategory
 
 PROVIDER_CONFIG = {
     "provider_name": "openai",
     "base_url": "https://api.openai.com/v1",
-    "api_key": "your_api_key_here",
+    "api_key": "",
     "icon": "openai_icon",
-    "description": "OpenAI API provider",
+    "description": "OpenAI 模型",
 }
 
 SUPPORTED_MODELS = [
@@ -35,29 +35,27 @@ SUPPORTED_MODELS = [
 ]
 
 
-def init_model(
-    model: str, temperature: float, openai_api_key: str, openai_api_base: str, **kwargs
-):
+def init_model(model: str, temperature: float, api_key: str, base_url: str, **kwargs):
     model_info = next((m for m in SUPPORTED_MODELS if m["name"] == model), None)
     if model_info and ModelCategory.CHAT in model_info["categories"]:
         return ChatOpenAI(
             model=model,
             temperature=temperature,
-            openai_api_key=openai_api_key,
-            openai_api_base=openai_api_base,
+            api_key=api_key,
+            base_url=base_url,
             **kwargs,
         )
     else:
         raise ValueError(f"Model {model} is not supported as a chat model.")
 
 
-def init_crewai_model(model: str, openai_api_key: str, openai_api_base: str, **kwargs):
+def init_crewai_model(model: str, api_key: str, base_url: str, **kwargs):
     model_info = next((m for m in SUPPORTED_MODELS if m["name"] == model), None)
     if model_info and ModelCategory.CHAT in model_info["categories"]:
         return LLM(
             model=f"openai/{model}",  # CrewAI 格式：provider/model
-            base_url=openai_api_base,
-            api_key=openai_api_key,
+            base_url=base_url,
+            api_key=api_key,
             **kwargs,
         )
     else:

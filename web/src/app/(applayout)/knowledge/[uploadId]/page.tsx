@@ -44,22 +44,14 @@ import useCustomToast from "@/hooks/useCustomToast";
 const SearchTypeInfo = [
   {
     type: "vector",
-    displayName: "向量检索",
-    description: "通过生成查询嵌入并查询与其向量表示最相似的文本分段。",
     icon: FaVectorSquare,
   },
   {
     type: "fulltext",
-    displayName: "全文检索",
-    description:
-      "索引文档中的所有词汇，从而允许用户查询任意词汇，并返回包含这些词汇的文本片段。",
     icon: AiOutlineFileSearch,
   },
   {
     type: "hybrid",
-    displayName: "混合检索",
-    description:
-      "同时执行全文检索和向量检索，并应用重排序步骤，从两类查询结果中选择匹配用户问题的最佳结果。",
     icon: FaMix,
   },
 ];
@@ -169,6 +161,10 @@ function KnowledgeTest() {
 
   const currentUpload = upload?.data.find((u) => u.id === Number(uploadId));
 
+  const getSearchTypeDisplayName = (type: string) => {
+    return t(`knowledge.test.searchType.${type}.name`);
+  };
+
   return (
     <Box
       display="flex"
@@ -211,13 +207,19 @@ function KnowledgeTest() {
         >
           <BreadcrumbItem>
             <BreadcrumbLink as={Link} href="/knowledge">
-              <Box display="flex" alignItems="center" color="gray.600" fontSize="sm" fontWeight="500">
+              <Box
+                display="flex"
+                alignItems="center"
+                color="gray.600"
+                fontSize="sm"
+                fontWeight="500"
+              >
                 <FiFileText style={{ marginRight: "6px" }} />
-                Knowledge
+                {t("knowledge.page.title")}
               </Box>
             </BreadcrumbLink>
           </BreadcrumbItem>
-          
+
           <BreadcrumbItem isCurrentPage>
             <BreadcrumbLink
               fontSize="sm"
@@ -276,8 +278,9 @@ function KnowledgeTest() {
                 </Text>
                 <CustomButton
                   text={
-                    SearchTypeInfo.find((info) => info.type === searchType)
-                      ?.displayName || t("knowledge.test.actions.selectType")
+                    searchType
+                      ? getSearchTypeDisplayName(searchType)
+                      : t("knowledge.test.actions.selectType")
                   }
                   variant="white"
                   onClick={() => setIsOptionsVisible(!isOptionsVisible)}
@@ -286,31 +289,48 @@ function KnowledgeTest() {
                 />
               </HStack>
 
-              <Textarea
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("knowledge.test.searchType.placeholder")!}
-                size="lg"
-                p={4}
-                minH="400px"
-                border="none"
-                _focus={{
-                  boxShadow: "none",
-                  borderColor: "ui.main",
-                }}
-                resize="none"
-                fontSize="sm"
-                transition="all 0.2s"
-              />
-
-              <Box position="absolute" bottom={4} right={4}>
-                <CustomButton
-                  text={t("knowledge.test.actions.search")}
-                  variant="blue"
-                  onClick={handleSearch}
-                  rightIcon={<MdBuild />}
-                  isLoading={searchMutation.isLoading}
+              <Box position="relative" minH="400px">
+                <Textarea
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("knowledge.test.searchType.placeholder")!}
+                  size="lg"
+                  p={4}
+                  pb="60px"
+                  minH="400px"
+                  border="none"
+                  _focus={{
+                    boxShadow: "none",
+                    borderColor: "ui.main",
+                  }}
+                  resize="none"
+                  fontSize="sm"
+                  transition="all 0.2s"
+                  sx={{
+                    "& ~ div": {
+                      pointerEvents: "auto",
+                    },
+                  }}
                 />
+
+                <Box
+                  position="absolute"
+                  bottom={4}
+                  right={4}
+                  bg="white"
+                  py={2}
+                  pointerEvents="auto"
+                  zIndex={2}
+                >
+                  <CustomButton
+                    text={t("knowledge.test.actions.search")}
+                    variant="blue"
+                    onClick={handleSearch}
+                    rightIcon={<MdBuild />}
+                    isLoading={searchMutation.isLoading}
+                    isDisabled={!query.trim()}
+                  />
+                </Box>
               </Box>
             </Box>
 
@@ -326,7 +346,7 @@ function KnowledgeTest() {
                 </Flex>
               )}
 
-              {searchResults?.results && (
+              {searchResults?.results && searchResults.results.length > 0 ? (
                 <VStack spacing={4} align="stretch">
                   <Text fontSize="lg" fontWeight="600" color="gray.800">
                     {t("knowledge.test.results.title")}
@@ -382,7 +402,20 @@ function KnowledgeTest() {
                     ))}
                   </SimpleGrid>
                 </VStack>
-              )}
+              ) : searchResults?.results ? (
+                <Box
+                  p={6}
+                  bg="white"
+                  borderRadius="xl"
+                  border="1px solid"
+                  borderColor="gray.100"
+                  textAlign="center"
+                >
+                  <Text color="gray.600">
+                    {t("knowledge.test.results.noResults")}
+                  </Text>
+                </Box>
+              ) : null}
             </Box>
 
             {isOptionsVisible && (
@@ -448,10 +481,14 @@ function KnowledgeTest() {
                               </Box>
                               <VStack align="start" spacing={1}>
                                 <Text fontWeight="500" color="gray.700">
-                                  {info.displayName}
+                                  {t(
+                                    `knowledge.test.searchType.${info.type}.name`
+                                  )}
                                 </Text>
                                 <Text fontSize="sm" color="gray.500">
-                                  {info.description}
+                                  {t(
+                                    `knowledge.test.searchType.${info.type}.description`
+                                  )}
                                 </Text>
                               </VStack>
                             </HStack>

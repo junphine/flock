@@ -17,8 +17,6 @@ export type MemberOut = {
     source?: (number | null);
     provider?: string;
     model?: string;
-    openai_api_key?: string;
-    openai_api_base?: string;
     temperature?: number;
     interrupt?: boolean;
     id: number;

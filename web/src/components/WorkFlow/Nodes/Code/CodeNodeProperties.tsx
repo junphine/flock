@@ -2,7 +2,6 @@ import {
   Box,
   Text,
   VStack,
-
   useToast,
   HStack,
   Input,
@@ -11,7 +10,7 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import React, { useCallback, useState, useEffect } from "react";
-import {  FaPlus, FaTrash } from "react-icons/fa";
+import { FaPlus, FaTrash } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
 import Editor from "@monaco-editor/react";
 import {loader} from "@monaco-editor/react";
@@ -36,7 +35,7 @@ interface CodeNodePropertiesProps {
 
 // Monaco Editor 主题配置
 const MONACO_THEME: MonacoEditor.IStandaloneThemeData = {
-  base: 'vs' as const,
+  base: "vs" as const,
   inherit: true,
   rules: [],
   colors: {
@@ -82,7 +81,7 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
 }) => {
   const { t } = useTranslation();
   const toast = useToast();
- 
+
   const [editorInstance, setEditorInstance] =
     useState<MonacoEditor.IStandaloneCodeEditor | null>(null);
   const [args, setArgs] = useState<ArgVariable[]>([]);
@@ -198,7 +197,7 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
       onNodeDataChange(node.id, "args", newArgs);
       updateCodeWithNewArgs(newArgs);
     },
-    [args, updateCodeWithNewArgs, onNodeDataChange,node.id]
+    [args, updateCodeWithNewArgs, onNodeDataChange, node.id]
   );
 
   const handleRemoveArg = useCallback(
@@ -208,7 +207,7 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
       onNodeDataChange(node.id, "args", newArgs);
       updateCodeWithNewArgs(newArgs);
     },
-    [args, updateCodeWithNewArgs, onNodeDataChange,node.id]
+    [args, updateCodeWithNewArgs, onNodeDataChange, node.id]
   );
 
   const handleAddArg = useCallback(() => {
@@ -251,10 +250,10 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
       <Box>
         <HStack justify="space-between" mb={2}>
           <Text fontWeight="500" color="gray.700">
-            输入变量
+            {t("team.workflow.nodes.code.inputVariables")}
           </Text>
           <IconButton
-            aria-label="Add argument"
+            aria-label={t("team.workflow.nodes.code.addVariable")}
             icon={<FaPlus />}
             size="sm"
             colorScheme="purple"
@@ -266,7 +265,9 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
           {args.map((arg, index) => (
             <HStack key={index} width="100%">
               <Input
-                placeholder="输入变量名"
+                placeholder={t(
+                  "team.workflow.nodes.code.placeholder.variableName"
+                ) as string}
                 value={arg.name}
                 onChange={(e) => handleArgNameChange(index, e.target.value)}
                 size="sm"
@@ -278,7 +279,9 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
                 onChange={(e) => handleArgValueChange(index, e.target.value)}
                 size="sm"
                 flex={1}
-                placeholder="选择变量"
+                placeholder={t(
+                  "team.workflow.nodes.code.placeholder.selectVariable"
+                ) as string}
               >
                 {availableVariables.map((v) => (
                   <option
@@ -304,7 +307,7 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
 
       <Box>
         <Text fontWeight="500" color="gray.700" mb={2}>
-          Python 代码
+          {t("team.workflow.nodes.code.pythonCode")}
         </Text>
         <Box
           borderRadius="md"
@@ -335,8 +338,6 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
         </Box>
       </Box>
 
-     
-
       {node.data.output && (
         <Box
           bg="gray.50"
@@ -346,7 +347,7 @@ const CodeNodeProperties: React.FC<CodeNodePropertiesProps> = ({
           borderLeftColor="purple.400"
         >
           <Text fontWeight="500" mb={2} color="gray.700" fontSize="sm">
-            执行结果:
+            {t("team.workflow.nodes.code.executionResult")}:
           </Text>
           <Text
             as="pre"

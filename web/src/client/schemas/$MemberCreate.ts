@@ -55,12 +55,6 @@ export const $MemberCreate = {
         model: {
             type: 'string',
         },
-        openai_api_key: {
-            type: 'string',
-        },
-        openai_api_base: {
-            type: 'string',
-        },
         temperature: {
             type: 'number',
         },

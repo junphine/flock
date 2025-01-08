@@ -76,6 +76,10 @@ const ModelProviderCard: React.FC<ModelCardProps> = ({ providerName }) => {
               h="12"
               w="40"
             />
+
+            <Text fontWeight="bold" fontSize="sm">
+              {providerInfo?.description}
+            </Text>
             <Wrap spacing={2}>
                 <WrapItem >
                   <Tag
@@ -97,15 +101,13 @@ const ModelProviderCard: React.FC<ModelCardProps> = ({ providerName }) => {
                     colorScheme="blue"
                     borderRadius="full"
                   >
-                    <Text fontWeight="500">
-                      {category.toUpperCase()}
-                    </Text>
+                    <Text fontWeight="500">{category.toUpperCase()}</Text>
                   </Tag>
                 </WrapItem>
               ))}
             </Wrap>
           </VStack>
-          
+
           <Button
             size="sm"
             leftIcon={<CiSettings />}
@@ -129,7 +131,13 @@ const ModelProviderCard: React.FC<ModelCardProps> = ({ providerName }) => {
             onClick={toggleCollapse}
             size="sm"
             variant="ghost"
-            leftIcon={isOpen ? <MdOutlineKeyboardDoubleArrowUp /> : <MdOutlineKeyboardDoubleArrowDown />}
+            leftIcon={
+              isOpen ? (
+                <MdOutlineKeyboardDoubleArrowUp />
+              ) : (
+                <MdOutlineKeyboardDoubleArrowDown />
+              )
+            }
             w="full"
             justifyContent="flex-start"
             bg={headerBg}
@@ -138,7 +146,9 @@ const ModelProviderCard: React.FC<ModelCardProps> = ({ providerName }) => {
               bg: "gray.100",
             }}
           >
-            {isOpen ? t("setting.setting.hidemodel") : t("setting.setting.showmodel")}
+            {isOpen
+              ? t("setting.setting.hidemodel")
+              : t("setting.setting.showmodel")}
           </Button>
 
           <Collapse in={isOpen}>
@@ -162,7 +172,7 @@ const ModelProviderCard: React.FC<ModelCardProps> = ({ providerName }) => {
                       />
                       <Text fontWeight="500">{model.ai_model_name}</Text>
                     </HStack>
-                    
+
                     <HStack spacing={2}>
                       {model.capabilities.includes("vision") && (
                         <FaEye color="gray" />

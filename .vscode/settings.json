@@ -20,5 +20,11 @@
             "username": "postgres",
             "password": "123456"
         }
-    ]
+    ],
+    "python.debugging.justMyCode": false,
+    "python.testing.pytestEnabled": true,
+    "debug.allowBreakpointsEverywhere": true,
+
 }
+
+

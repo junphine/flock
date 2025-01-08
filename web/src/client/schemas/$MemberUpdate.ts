@@ -85,22 +85,6 @@ export const $MemberUpdate = {
                 type: 'null',
             }],
         },
-        openai_api_key: {
-            type: 'any-of',
-            contains: [{
-                type: 'string',
-            }, {
-                type: 'null',
-            }],
-        },
-        openai_api_base: {
-            type: 'any-of',
-            contains: [{
-                type: 'string',
-            }, {
-                type: 'null',
-            }],
-        },
         temperature: {
             type: 'any-of',
             contains: [{

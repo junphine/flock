@@ -1,10 +1,18 @@
-from typing import Any, Dict
-from langchain_core.messages import AIMessage
-from langchain_core.runnables import RunnableConfig
+from typing import Any
+
 from langchain_core.output_parsers import JsonOutputParser
-from .state import ReturnTeamState, TeamState, parse_variables, update_node_outputs
-from app.core.model_providers.model_provider_manager import model_provider_manager
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
+
+from app.core.model_providers.model_provider_manager import model_provider_manager
+from app.core.workflow.utils.db_utils import get_model_info
+
+from ...state import (
+    ReturnWorkflowTeamState,
+    WorkflowTeamState,
+    parse_variables,
+    update_node_outputs,
+)
 
 CLASSIFIER_SYSTEM_PROMPT = """
 ### Job Description
@@ -46,22 +54,20 @@ class ClassifierNode:
     def __init__(
         self,
         node_id: str,
-        provider: str,
-        model: str,
-        categories: list[Dict[str, str]],
+        model_name: str,
+        categories: list[dict[str, str]],
         input: str = "",
-        openai_api_key: str = "",
-        openai_api_base: str = "",
     ):
         self.node_id = node_id
-        self.provider = provider
-        self.model = model
+
         self.categories = categories
         self.input = input
-        self.openai_api_key = openai_api_key
-        self.openai_api_base = openai_api_base
 
-    async def work(self, state: TeamState, config: RunnableConfig) -> ReturnTeamState:
+        self.model_info = get_model_info(model_name)
+
+    async def work(
+        self, state: WorkflowTeamState, config: RunnableConfig
+    ) -> ReturnWorkflowTeamState:
         """Execute classification work"""
         if "node_outputs" not in state:
             state["node_outputs"] = {}
@@ -75,11 +81,11 @@ class ClassifierNode:
 
         # Initialize LLM with provider info
         llm = model_provider_manager.init_model(
-            provider_name=self.provider,
-            model=self.model,
+            provider_name=self.model_info["provider_name"],
+            model=self.model_info["ai_model_name"],
             temperature=0.1,
-            openai_api_key=self.openai_api_key,
-            openai_api_base=self.openai_api_base,
+            api_key=self.model_info["api_key"],
+            base_url=self.model_info["base_url"],
         )
 
         # Prepare categories list and input in JSON format
@@ -108,22 +114,23 @@ class ClassifierNode:
                     return result
                 else:
                     print(f"Unexpected result format: {result}")
-                    return self.categories[0]["category_name"]  # 使用默认分类
+                    # 使用 others 分类作为默认
+                    return "Others Intent"
             except Exception as e:
                 print(f"Error normalizing result: {e}")
-                return self.categories[0]["category_name"]  # 出错时使用默认分类
-            
+                # 出错时使用 others 分类
+                return "Others Intent"
+
         result = await chain.ainvoke(input_json)
-        print("classifier result:", result)
-        
+
         # Ensure categories is not empty and has valid format
         if not self.categories or not isinstance(self.categories, list):
             print("Invalid categories format")
             return {"node_outputs": state.get("node_outputs", {})}
-            
+
         # Get normalized category name
         category_name = normalize_category_result(result)
-        
+
         try:
             # Find matching category and get its ID
             matched_category = next(
@@ -132,34 +139,43 @@ class ClassifierNode:
                     for cat in self.categories
                     if isinstance(cat, dict)
                     and "category_name" in cat
-                    and "category_id" in cat  # 确保必要的键存在
+                    and "category_id" in cat
                     and cat["category_name"].lower() == category_name.lower()
                 ),
-                self.categories[0],  # Default to first category if no match found
+                next(  # 如果没找到匹配的类别，使用 others 类别
+                    (
+                        cat
+                        for cat in self.categories
+                        if cat["category_id"] == "others_category"
+                    ),
+                    {
+                        "category_id": "others_category",
+                        "category_name": "Others Intent",
+                    },  # 最后的 fallback
+                ),
             )
         except Exception as e:
             print(f"Error matching category: {e}")
-            # 确保至少有一个有效的分类可用
-            matched_category = self.categories[0] if self.categories else {
-                "category_id": "default",
-                "category_name": "Default Category"
-            }
-
-        # Create response message
-        # result_message = AIMessage(content=matched_category["category_name"])
-
-        # Update node outputs with both category_name and category_id
+            # 确保使用 others 类别作为 fallback
+            matched_category = next(
+                (
+                    cat
+                    for cat in self.categories
+                    if cat["category_id"] == "others_category"
+                ),
+                {"category_id": "others_category", "category_name": "Others Intent"},
+            )
+        print("matched_category:", matched_category)
+        # Update node outputs with both category_id and category_name
         new_output = {
             self.node_id: {
-                "category_id": matched_category["category_id"],  # 更语义化的键名
-                "category_name": matched_category[
-                    "category_name"
-                ],  # 保存分类名称供参考
+                "category_id": matched_category["category_id"],
+                "category_name": matched_category["category_name"],
             }
         }
         state["node_outputs"] = update_node_outputs(state["node_outputs"], new_output)
 
-        return_state: ReturnTeamState = {
+        return_state: ReturnWorkflowTeamState = {
             "node_outputs": state["node_outputs"],
         }
 

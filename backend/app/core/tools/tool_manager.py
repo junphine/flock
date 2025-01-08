@@ -1,11 +1,11 @@
 import importlib
 import os
-from typing import Any, Dict
+from typing import Any
 
-from langchain.pydantic_v1 import BaseModel
 from langchain.tools import BaseTool
 from langchain_community.tools import DuckDuckGoSearchRun, WikipediaQueryRun
 from langchain_community.utilities.wikipedia import WikipediaAPIWrapper
+from pydantic import BaseModel
 
 
 class ToolInfo(BaseModel):
@@ -18,7 +18,7 @@ class ToolInfo(BaseModel):
 
 class ToolManager:
     def __init__(self):
-        self.managed_tools: Dict[str, ToolInfo] = {}
+        self.managed_tools: dict[str, ToolInfo] = {}
 
     @staticmethod
     def format_tool_name(name: str) -> str:
@@ -127,7 +127,7 @@ class ToolManager:
         }
         self.managed_tools.update(external_tools)
 
-    def get_tools(self) -> Dict[str, ToolInfo]:
+    def get_tools(self) -> dict[str, ToolInfo]:
         return self.managed_tools
 
 
