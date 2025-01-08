@@ -161,6 +161,33 @@ const translation = {
           selectVariable: "选择变量",
         },
       },
+      human: {
+        nodeTitle: "人工节点",
+        interactionType: "交互类型",
+        types: {
+          toolReview: "工具调用审核",
+          outputReview: "内容审核",
+          contextInput: "补充信息",
+        },
+        title: "标题",
+        titlePlaceholder: "请输入节点标题",
+        routes: "路由配置",
+        // Tool Review routes
+        approveRoute: "同意后跳转到",
+        rejectRoute: "拒绝后跳转到",
+        updateRoute: "修改参数后跳转到",
+        feedbackRoute: "反馈后跳转到",
+        // Output Review routes
+        reviewRoute: "审核通过后跳转到",
+        editRoute: "修改内容后跳转到",
+        // Context Input routes
+        continueRoute: "提供信息后继续到",
+        defaultTitles: {
+          toolReview: "请审核工具调用请求",
+          outputReview: "请审核AI生成的内容",
+          contextInput: "需要您的补充信息",
+        },
+      },
     },
     common: {
       add: "添加",

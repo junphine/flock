@@ -166,6 +166,33 @@ const translation = {
           selectVariable: "Select variable",
         },
       },
+      human: {
+        nodeTitle: "Human Node",
+        interactionType: "Interaction Type",
+        types: {
+          toolReview: "Tool Call Review",
+          outputReview: "Content Review",
+          contextInput: "Additional Input",
+        },
+        title: "Title",
+        titlePlaceholder: "Please enter node title",
+        routes: "Route Configuration",
+        // Tool Review routes
+        approveRoute: "Route After Approval",
+        rejectRoute: "Route After Rejection",
+        updateRoute: "Route After Parameter Update",
+        feedbackRoute: "Route After Feedback",
+        // Output Review routes
+        reviewRoute: "Route After Review",
+        editRoute: "Route After Edit",
+        // Context Input routes
+        continueRoute: "Route After Input",
+        defaultTitles: {
+          toolReview: "Please Review Tool Call Request",
+          outputReview: "Please Review AI Generated Content",
+          contextInput: "Additional Information Needed",
+        },
+      },
     },
     common: {
       add: "Add",

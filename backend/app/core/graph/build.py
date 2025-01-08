@@ -15,7 +15,7 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import ToolNode
 from psycopg import AsyncConnection
-
+from langgraph.types import Command
 from app.core.config import settings
 from app.core.graph.members import (
     GraphLeader,
@@ -739,51 +739,128 @@ async def generator(
                 "configurable": {"thread_id": thread_id},
                 "recursion_limit": settings.RECURSION_LIMIT,
             }
+
             # Handle interrupt logic by orriding state
-            if interrupt and interrupt.decision == InterruptDecision.APPROVED:
-                state = None
-            elif interrupt and interrupt.decision == InterruptDecision.REJECTED:
-                current_values = await root.aget_state(config)
-                messages = current_values.values["messages"]
-                if messages and isinstance(messages[-1], AIMessage):
-                    tool_calls = messages[-1].tool_calls
-                    state = {
-                        "messages": [
-                            ToolMessage(
-                                tool_call_id=tool_call["id"],
-                                content="Rejected by user. Continue assisting.",
+            if interrupt and interrupt.interrupt_type is None:
+                if interrupt.decision == InterruptDecision.APPROVED:
+                    state = None
+                elif interrupt.decision == InterruptDecision.REJECTED:
+                    current_values = await root.aget_state(config)
+                    messages = current_values.values["messages"]
+                    if messages and isinstance(messages[-1], AIMessage):
+                        tool_calls = messages[-1].tool_calls
+                        state = {
+                            "messages": [
+                                ToolMessage(
+                                    tool_call_id=tool_call["id"],
+                                    content="Rejected by user. Continue assisting.",
+                                )
+                                for tool_call in tool_calls
+                            ]
+                        }
+                        if interrupt.tool_message:
+                            state["messages"].append(
+                                HumanMessage(
+                                    content=interrupt.tool_message,
+                                    name="user",
+                                    id=str(uuid4()),
+                                )
                             )
-                            for tool_call in tool_calls
-                        ]
-                    }
-                    if interrupt.tool_message:
-                        state["messages"].append(
-                            HumanMessage(
-                                content=interrupt.tool_message,
-                                name="user",
-                                id=str(uuid4()),
-                            )
+                elif interrupt.decision == InterruptDecision.REPLIED:
+                    current_values = await root.aget_state(config)
+                    messages = current_values.values["messages"]
+                    if (
+                        messages
+                        and isinstance(messages[-1], AIMessage)
+                        and interrupt.tool_message
+                    ):
+                        tool_calls = messages[-1].tool_calls
+                        state = {
+                            "messages": [
+                                ToolMessage(
+                                    tool_call_id=tool_call["id"],
+                                    content=interrupt.tool_message,
+                                    name="ask-human",
+                                )
+                                for tool_call in tool_calls
+                                if tool_call["name"] == "ask-human"
+                            ]
+                        }
+            elif interrupt and interrupt.interrupt_type is not None:
+                # 添加新的工具审查相关的中断处理
+                if interrupt.interrupt_type == "tool_review":
+                    if interrupt.decision == InterruptDecision.APPROVED:
+                        # 批准工具调用,继续执行
+
+                        state = Command(resume={"action": "approved"})
+
+                    elif interrupt.decision == InterruptDecision.REJECTED:
+                        # 拒绝工具调用,添加拒绝消息
+
+                        reject_message = (
+                            interrupt.tool_message
+                            if interrupt.tool_message
+                            else "Tool call rejected"
                         )
-            elif interrupt and interrupt.decision == InterruptDecision.REPLIED:
-                current_values = await root.aget_state(config)
-                messages = current_values.values["messages"]
-                if (
-                    messages
-                    and isinstance(messages[-1], AIMessage)
-                    and interrupt.tool_message
-                ):
-                    tool_calls = messages[-1].tool_calls
-                    state = {
-                        "messages": [
-                            ToolMessage(
-                                tool_call_id=tool_call["id"],
-                                content=interrupt.tool_message,
-                                name="ask-human",
-                            )
-                            for tool_call in tool_calls
-                            if tool_call["name"] == "ask-human"
-                        ]
-                    }
+                        state = Command(
+                            resume={"action": "rejected", "data": reject_message}
+                        )
+
+                    elif interrupt.decision == InterruptDecision.UPDATE:
+                        # 更新工具调用参数
+
+                        state = Command(
+                            resume={"action": "update", "data": interrupt.tool_message}
+                        )
+
+                    elif interrupt.decision == InterruptDecision.FEEDBACK:
+                        # 添加反馈消息
+
+                        state = Command(
+                            resume={
+                                "action": "feedback",
+                                "data": interrupt.tool_message,
+                            }
+                        )
+
+                elif interrupt.interrupt_type == "output_review":
+                    # 处理输出审查
+                    if interrupt.decision == InterruptDecision.APPROVED:
+                        # 批准输出,继续执行
+                        state = Command(resume={"action": "approved"})
+                    elif interrupt.decision == InterruptDecision.REVIEW:
+                        # 需要修改输出,添加反馈
+                        state = Command(
+                            resume={"action": "review", "data": interrupt.tool_message}
+                        )
+                    elif interrupt.decision == InterruptDecision.EDIT:
+                        # 直接编辑输出内容
+                        state = Command(
+                            resume={"action": "edit", "data": interrupt.tool_message}
+                        )
+                    else:
+                        raise ValueError(
+                            f"Unsupported decision for output review: {interrupt.decision}"
+                        )
+
+                elif interrupt.interrupt_type == "context_input":
+                    # 处理上下文输入,添加用户提供的额外信息
+                    if interrupt.decision == InterruptDecision.CONTINUE:
+                        state = Command(
+                            resume={
+                                "action": "continue",
+                                "data": interrupt.tool_message,
+                            }
+                        )
+                    else:
+                        raise ValueError(
+                            f"Unsupported decision for context input: {interrupt.decision}"
+                        )
+
+                else:
+                    raise ValueError(
+                        f"Unsupported interrupt type: {interrupt.interrupt_type}"
+                    )
             async for event in root.astream_events(state, version="v2", config=config):
                 response = event_to_response(event)
                 if response:
@@ -792,27 +869,44 @@ async def generator(
             snapshot = await root.aget_state(config)
 
             if snapshot.next:
-                # Interrupt occured
-                message = snapshot.values["messages"][-1]
-                if not isinstance(message, AIMessage):
-                    return
-                # Determine if should return default or askhuman interrupt based on whether AskHuman tool was called.
-                for tool_call in message.tool_calls:
-                    if tool_call["name"] == "ask-human":
+                try:
+                    message = snapshot.values["messages"][-1]
+                except Exception:
+                    message = snapshot.values["all_messages"][-1]
+
+                # 非workflow类型的处理
+                if team.workflow != "workflow":
+                    # Determine if should return default or askhuman interrupt based on whether AskHuman tool was called.
+                    if not isinstance(message, AIMessage):
+                        return
+                    for tool_call in message.tool_calls:
+                        if tool_call["name"] == "ask-human":
+                            response = ChatResponse(
+                                type="interrupt",
+                                name="human",
+                                tool_calls=message.tool_calls,
+                                id=str(uuid4()),
+                            )
+                            break
+                    else:
                         response = ChatResponse(
                             type="interrupt",
-                            name="human",
+                            name="interrupt",
                             tool_calls=message.tool_calls,
                             id=str(uuid4()),
                         )
-                        break
+                # workflow类型的处理
                 else:
+
                     response = ChatResponse(
                         type="interrupt",
-                        name="interrupt",
-                        tool_calls=message.tool_calls,
+                        name="context_input",
+                        # name= "tool_review"
+                        # name="output_review"
+                        content=message.content,
                         id=str(uuid4()),
                     )
+
                 formatted_output = f"data: {response.model_dump_json()}\n\n"
                 yield formatted_output
     except Exception as e:

@@ -138,14 +138,24 @@ class ChatMessage(BaseModel):
     content: str
     imgdata: str | None = None  # 添加 imgdata 字段
 
+class InterruptType(str, Enum):
+    TOOL_REVIEW = "tool_review"
+    OUTPUT_REVIEW = "output_review"
+    CONTEXT_INPUT = "context_input"
 
-class InterruptDecision(Enum):
+class InterruptDecision(str, Enum):
     APPROVED = "approved"
     REJECTED = "rejected"
     REPLIED = "replied"
+    UPDATE = "update"
+    FEEDBACK = "feedback"
+    REVIEW = "review"
+    EDIT = "edit"
+    CONTINUE = "continue"
 
 
 class Interrupt(BaseModel):
+    interrupt_type: InterruptType | None = None
     decision: InterruptDecision
     tool_message: str | None = None
 
@@ -488,7 +498,7 @@ class Write(SQLModel, table=True):
 class UploadBase(SQLModel):
     name: str
     description: str
-    file_type: str  # 新��字段，用于储文件类型
+    file_type: str  # 新字段，用于储文件类型
     web_url: str | None = None  # 新增字段，用于存储网页 URL
 
 
@@ -778,3 +788,6 @@ class ApiKeyOutPublic(ApiKeyBase):
 class ApiKeysOutPublic(SQLModel):
     data: list[ApiKeyOutPublic]
     count: int
+
+
+
