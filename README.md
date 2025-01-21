@@ -9,6 +9,14 @@
 
 > [!NOTE]
 >
+> ### 🎉 What's New 2025/1/21
+>
+> - **Subgraph Node Support**: Added subgraph node that allows you to encapsulate and reuse complete sub-workflows!
+>
+>   - 📦 Modular: Encapsulate complex workflows as standalone subgraph nodes
+>   - 🔄 Reusable: Reuse the same subgraph node across different workflows
+>   - 🎯 Maintainable: Update and maintain sub-workflow logic independently
+>
 > ### 🎉 What's New 2025/1/8
 >
 > - **Human Node**: Added a new human-in-the-loop node supporting key scenarios:
@@ -66,9 +74,7 @@ Flock's workflow system consists of various node types, each serving a specific 
 
 Future planned nodes include:
 
-- Conditional Branch Node (If-Else)
 - File Upload Node
-- Code Execution Node
 - Parameter Extraction Node
 
 These nodes can be combined to create powerful and flexible workflows suitable for various complex business needs and application scenarios.
@@ -139,7 +145,7 @@ Project tech stack: LangChain + LangGraph + React + Next.js + Chakra UI + Postgr
 ### 🏘️Highlights
 
 - Persistent conversations: Save and maintain chat histories, allowing you to continue conversations.
-- Observability: Monitor and track your agents’ performance and outputs in real-time using LangSmith to ensure they operate efficiently.
+- Observability: Monitor and track your agents' performance and outputs in real-time using LangSmith to ensure they operate efficiently.
 - Tool Calling: Enable your agents to utilize external tools and APIs.
 - Retrieval Augmented Generation: Enable your agents to reason with your internal knowledge base.
 - Human-In-The-Loop: Enable human approval before tool calling.
