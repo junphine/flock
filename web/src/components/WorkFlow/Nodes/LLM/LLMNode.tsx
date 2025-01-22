@@ -29,7 +29,6 @@ const LLMNode: React.FC<NodeProps> = (props) => {
     height: 8,
     border: "2px solid white",
     transition: "all 0.2s",
-    // top: "30px",
   };
 
   return (
@@ -86,6 +85,7 @@ const LLMNode: React.FC<NodeProps> = (props) => {
 export default React.memo(LLMNode, (prevProps, nextProps) => {
   return (
     prevProps.data.modelprovider_name === nextProps.data.modelprovider_name &&
-    prevProps.data.model === nextProps.data.model
+    prevProps.data.model === nextProps.data.model &&
+    prevProps.data.label === nextProps.data.label
   );
 });
