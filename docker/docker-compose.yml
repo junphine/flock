@@ -1,11 +1,126 @@
 services:
+  frontend:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      target: production
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    networks:
+      - docker_default
+    ports:
+      - 3000:3000
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://backend:8000
+      - TZ=UTC
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=docker_default
+      - traefik.constraint-label=docker_default
+      - traefik.http.routers.${STACK_NAME}-frontend-http.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.${STACK_NAME}-frontend-http.entrypoints=http
+      - traefik.http.routers.${STACK_NAME}-frontend-http.middlewares=https-redirect
+      - traefik.http.routers.${STACK_NAME}-frontend-https.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.${STACK_NAME}-frontend-https.entrypoints=https
+      - traefik.http.routers.${STACK_NAME}-frontend-https.tls=true
+      - traefik.http.routers.${STACK_NAME}-frontend-https.tls.certresolver=le
+      - traefik.http.services.${STACK_NAME}-frontend.loadbalancer.server.port=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: production
+    image: flock-backend
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    networks:
+      - docker_default
+    ports:
+      - 8000:8000
+    environment:
+      - DEBUG=true
+      - SERVER_WORKER_AMOUNT=2
+      - GUNICORN_TIMEOUT=120
+      - TZ=UTC
+      - POSTGRES_SERVER=db
+      - QDRANT_URL=http://qdrant:6333
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - HOME=/app/data
+    env_file:
+      - .env
+
+    volumes:
+      - app-upload-data:/app/upload
+      - app-backend-model-cache:/app/model_cache
+      - app-data:/app/data
+    depends_on:
+      - db
+      - redis
+      - qdrant
+    restart: always
+
+  celery_worker:
+    image: flock-backend
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    networks:
+      - docker_default
+    environment:
+      - MODE=worker
+      - MIGRATION_ENABLED=true
+      - CELERY_AUTO_SCALE=true
+      - CELERY_MAX_WORKERS=4
+      - CELERY_MIN_WORKERS=1
+      - LOG_LEVEL=INFO
+      - TZ=UTC
+      - POSTGRES_SERVER=postgres
+      - QDRANT_URL=http://qdrant:6333
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - HOME=/app/data
+    env_file:
+      - .env
+    volumes:
+      - app-upload-data:/app/upload
+      - app-backend-model-cache:/app/model_cache
+      - app-data:/app/data
+    depends_on:
+      - redis
+      - db
+      - qdrant
+
   db:
     image: postgres:12
     restart: always
+    networks:
+      - docker_default
     volumes:
       - app-db-data:/var/lib/postgresql/data/pgdata
     env_file:
-      - ../.env
+      - .env
     environment:
       - PGDATA=/var/lib/postgresql/data/pgdata
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
@@ -13,46 +128,41 @@ services:
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
     ports:
       - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   qdrant:
     image: qdrant/qdrant
     restart: always
+    networks:
+      - docker_default
     volumes:
       - app-qdrant-data:/qdrant/storage
     environment:
       - QDRANT_SERVICE_API_KEY=${QDRANT_SERVICE_API_KEY?Variable not set}
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=docker_default
-      - traefik.constraint-label=docker_default
-      - traefik.http.routers.${STACK_NAME?Variable not set}-qdrant-http.rule=Host(`qdrant.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-qdrant-http.entrypoints=http
-      - traefik.http.routers.${STACK_NAME?Variable not set}-qdrant-http.middlewares=https-redirect
-      - traefik.http.routers.${STACK_NAME?Variable not set}-qdrant-https.rule=Host(`qdrant.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-qdrant-https.entrypoints=https
-      - traefik.http.routers.${STACK_NAME?Variable not set}-qdrant-https.tls=true
-      - traefik.http.routers.${STACK_NAME?Variable not set}-qdrant-https.tls.certresolver=le
-      - traefik.http.services.${STACK_NAME?Variable not set}-qdrant.loadbalancer.server.port=6333
     ports:
       - 6334:6334
       - 6333:6333
+
   redis:
     image: redis:alpine
     restart: always
+    networks:
+      - docker_default
     ports:
       - 6379:6379
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=docker_default
-      - traefik.constraint-label=docker_default
-      - traefik.http.routers.${STACK_NAME?Variable not set}-redis-http.rule=Host(`redis.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-redis-http.entrypoints=http
-      - traefik.http.routers.${STACK_NAME?Variable not set}-redis-http.middlewares=https-redirect
-      - traefik.http.routers.${STACK_NAME?Variable not set}-redis-https.rule=Host(`redis.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-redis-https.entrypoints=https
-      - traefik.http.routers.${STACK_NAME?Variable not set}-redis-https.tls=true
-      - traefik.http.routers.${STACK_NAME?Variable not set}-redis-https.tls.certresolver=le
-      - traefik.http.services.${STACK_NAME?Variable not set}-redis.loadbalancer.server.port=6379
+    volumes:
+      - app-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   code-interpreter:
     build:
@@ -90,9 +200,12 @@ services:
 networks:
   docker_default:
     external: true
+
 volumes:
   app-db-data:
+  app-redis-data:
   app-qdrant-data:
-  app-backend-model-cache:
-  app-upload-data:
   app-code-workspace:
+  app-upload-data:
+  app-backend-model-cache:
+  app-data:
