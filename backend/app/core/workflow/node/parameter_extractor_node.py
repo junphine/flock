@@ -1,5 +1,3 @@
-from typing import Any, Optional
-
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
@@ -140,10 +138,8 @@ class ParameterExtractorNode:
 
         result = await chain.ainvoke(input_json)
 
-        parameters = result
-
         # Update node outputs
-        new_output = {self.node_id: parameters}
+        new_output = {self.node_id: {"parameters": result}}
         state["node_outputs"] = update_node_outputs(state["node_outputs"], new_output)
 
         return_state: ReturnWorkflowTeamState = {

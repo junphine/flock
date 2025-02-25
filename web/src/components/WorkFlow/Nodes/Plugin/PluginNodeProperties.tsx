@@ -1,8 +1,7 @@
-import { Text, VStack, Button } from "@chakra-ui/react";
+import { Text, VStack } from "@chakra-ui/react";
 import type React from "react";
 import { useCallback, useState } from "react";
 
-import { ToolsService } from "@/client/services/ToolsService";
 import { useVariableInsertion } from "@/hooks/graphs/useVariableInsertion";
 import { useSkillsQuery } from "@/hooks/useSkillsQuery";
 import { VariableReference } from "../../FlowVis/variableSystem";
@@ -26,87 +25,47 @@ const PluginNodeProperties: React.FC<PluginNodePropertiesProps> = ({
   const [loading, setLoading] = useState(false);
 
   const handleInputChange = useCallback(
-    (key: string, value: string) => {
-      onNodeDataChange(node.id, "args", {
-        ...node.data.args,
-        [key]: value,
-      });
+    (value: string) => {
+      onNodeDataChange(node.id, "args", value);
     },
-    [node.id, node.data.args, onNodeDataChange]
+    [node.id, onNodeDataChange]
   );
 
-  const variableInsertionHooks: {
-    [key: string]: ReturnType<typeof useVariableInsertion<HTMLTextAreaElement>>;
-  } = {};
+  const variableInsertionHook = useVariableInsertion<HTMLTextAreaElement>({
+    onValueChange: handleInputChange,
+    availableVariables,
+  });
 
-  if (tool?.input_parameters) {
-    Object.keys(tool.input_parameters).forEach((key) => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      variableInsertionHooks[key] = useVariableInsertion<HTMLTextAreaElement>({
-        onValueChange: (value) => handleInputChange(key, value),
-        availableVariables,
-      });
-    });
-  }
-
-  const handleInvoke = async () => {
-    setLoading(true);
-    try {
-      const response = await ToolsService.invokeTools({
-        toolName: node.data.toolName,
-        requestBody: node.data.args,
-      });
-      console.log("Invoke Result:", response);
-    } catch (err) {
-      console.error("Error invoking tool", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 添加一个函数来格式化输入参数
+  const formatInputSchema = useCallback(() => {
+    if (!tool?.input_parameters) return null;
+    return Object.entries(tool.input_parameters).map(([key, type]) => (
+      <Text key={key} ml={4} fontSize="sm" color="gray.600">
+        {key}: {type}
+      </Text>
+    ));
+  }, [tool?.input_parameters]);
 
   return (
     <VStack align="stretch" spacing={4}>
-      <Text fontWeight="bold" mb={2} color="gray.700">
-        Input Parameters:
-      </Text>
-      {tool?.input_parameters &&
-        Object.entries(tool.input_parameters).map(([key]) => (
-          <VariableSelector
-            key={key}
-            label={key}
-            value={node.data.args[key] || ""}
-            onChange={(value) => handleInputChange(key, value)}
-            showVariables={variableInsertionHooks[key]?.showVariables}
-            setShowVariables={variableInsertionHooks[key]?.setShowVariables}
-            inputRef={variableInsertionHooks[key]?.inputRef}
-            handleKeyDown={variableInsertionHooks[key]?.handleKeyDown}
-            insertVariable={variableInsertionHooks[key]?.insertVariable}
-            availableVariables={availableVariables}
-            minHeight="80px"
-          />
-        ))}
-      <Button
-        onClick={handleInvoke}
-        isLoading={loading}
-        colorScheme="blue"
-        size="md"
-        borderRadius="lg"
-        bg="ui.main"
-        color="white"
-        fontWeight="500"
-        transition="all 0.2s"
-        _hover={{
-          bg: "blue.500",
-          transform: "translateY(-1px)",
-          boxShadow: "md",
-        }}
-        _active={{
-          bg: "blue.600",
-          transform: "translateY(0)",
-        }}
-      >
-        Run Tool
-      </Button>
+      <VStack align="stretch" spacing={1}>
+        <Text fontWeight="bold" mb={2} color="gray.700">
+          Input Schema:
+        </Text>
+        {formatInputSchema()}
+      </VStack>
+      <VariableSelector
+        label="Args"
+        value={node.data.args || ""}
+        onChange={handleInputChange}
+        showVariables={variableInsertionHook.showVariables}
+        setShowVariables={variableInsertionHook.setShowVariables}
+        inputRef={variableInsertionHook.inputRef}
+        handleKeyDown={variableInsertionHook.handleKeyDown}
+        insertVariable={variableInsertionHook.insertVariable}
+        availableVariables={availableVariables}
+        minHeight="80px"
+      />
     </VStack>
   );
 };
