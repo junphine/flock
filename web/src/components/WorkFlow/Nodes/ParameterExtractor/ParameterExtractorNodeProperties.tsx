@@ -1,41 +1,28 @@
 import {
   Box,
-  Button,
   HStack,
   IconButton,
   Text,
   VStack,
   Textarea,
+  Tooltip,
 } from "@chakra-ui/react";
 import React, { useCallback, useState } from "react";
-import { FaPlus, FaTrash, FaEdit } from "react-icons/fa";
+import { FaPlus, FaTrash, FaEdit, FaFileImport } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
-import { v4 as uuidv4 } from "uuid";
 
 import ModelSelect from "@/components/Common/ModelProvider";
 import { useModelQuery } from "@/hooks/useModelQuery";
-import { Parameter } from "../../types";
+import { useSkillsQuery } from "@/hooks/useSkillsQuery";
+import { ParameterSchema } from "../../types";
 import { useForm } from "react-hook-form";
 import ParameterModal from "./ParameterModal";
+import ToolsList from "../Tool/ToolsListModal";
 
 interface ParameterExtractorNodePropertiesProps {
   node: any;
   onNodeDataChange: (nodeId: string, key: string, value: any) => void;
 }
-
-interface FormValues {
-  model: string;
-  provider: string;
-}
-
-const PARAMETER_TYPES = [
-  "string",
-  "number",
-  "boolean",
-  "array[string]",
-  "array[number]",
-  "array[object]"
-];
 
 const ParameterExtractorNodeProperties: React.FC<ParameterExtractorNodePropertiesProps> = ({
   node,
@@ -43,7 +30,8 @@ const ParameterExtractorNodeProperties: React.FC<ParameterExtractorNodePropertie
 }) => {
   const { t } = useTranslation();
   const { data: models, isLoading: isLoadingModel } = useModelQuery();
-  const { control } = useForm<FormValues>({
+  const { data: skills } = useSkillsQuery();
+  const { control } = useForm<{ model: string; provider: string }>({
     defaultValues: {
       model: node.data.model || "",
       provider: "",
@@ -51,60 +39,92 @@ const ParameterExtractorNodeProperties: React.FC<ParameterExtractorNodePropertie
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingParameter, setEditingParameter] = useState<Parameter | undefined>();
+  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
+  const [editingParameter, setEditingParameter] = useState<ParameterSchema | undefined>();
 
   const handleAddParameter = useCallback(() => {
     setEditingParameter(undefined);
     setIsModalOpen(true);
   }, []);
 
-  const handleEditParameter = useCallback((parameter: Parameter) => {
+  const handleEditParameter = useCallback((parameter: ParameterSchema) => {
     setEditingParameter(parameter);
     setIsModalOpen(true);
   }, []);
 
   const handleRemoveParameter = useCallback(
-    (parameterId: string) => {
+    (paramName: string) => {
       const currentParameters = node.data.parameters || [];
-      if (currentParameters.length <= 1) {
-        return;
-      }
-
       onNodeDataChange(
         node.id,
         "parameters",
-        currentParameters.filter(
-          (p: Parameter) => p.parameter_id !== parameterId
-        )
+        currentParameters.filter((p: ParameterSchema) => !p[paramName])
       );
     },
     [node.id, node.data.parameters, onNodeDataChange]
   );
 
   const handleSaveParameter = useCallback(
-    (parameter: Parameter) => {
+    (parameter: ParameterSchema) => {
       const currentParameters = Array.isArray(node.data.parameters) ? node.data.parameters : [];
-      let updatedParameters;
-
-      if (parameter.parameter_id) {
-        // 编辑已存在的参数
-        updatedParameters = currentParameters.map((p: Parameter) =>
-          p.parameter_id === parameter.parameter_id ? parameter : p
-        );
+      const newParamName = Object.keys(parameter)[0];
+      
+      if (editingParameter) {
+        // 编辑模式：替换现有参数
+        const oldParamName = Object.keys(editingParameter)[0];
+        const updatedParameters = currentParameters.map((p: ParameterSchema) => {
+          const paramName = Object.keys(p)[0];
+          return paramName === oldParamName ? parameter : p;
+        });
+        onNodeDataChange(node.id, "parameters", updatedParameters);
       } else {
-        // 添加新参数
-        const newParameter = {
-          ...parameter,
-          parameter_id: uuidv4()
-        };
-        updatedParameters = [...currentParameters, newParameter];
+        // 新增模式：检查重名并添加
+        const exists = currentParameters.some((p: ParameterSchema) => Object.keys(p)[0] === newParamName);
+        if (exists) {
+          alert("A parameter with this name already exists!");
+          return;
+        }
+        onNodeDataChange(node.id, "parameters", [...currentParameters, parameter]);
       }
-
-      onNodeDataChange(node.id, "parameters", updatedParameters);
+      
       setIsModalOpen(false);
     },
-    [node.id, node.data.parameters, onNodeDataChange]
+    [node.id, node.data.parameters, onNodeDataChange, editingParameter]
   );
+
+  const handleImportFromTool = useCallback(() => {
+    setIsToolsModalOpen(true);
+  }, []);
+
+  const handleToolSelect = useCallback((toolName: string) => {
+    const selectedTool = skills?.data.find(
+      (skill) => skill.display_name === toolName
+    );
+    
+    if (!selectedTool?.input_parameters) return;
+
+    const newParameters = Object.entries(selectedTool.input_parameters).map(([key, value]: [string, any]) => ({
+      [key]: {
+        type: value.type,
+        required: value.required || false,
+        description: value.description || "",
+      }
+    }));
+
+    // 合并现有参数和新参数，避免重复
+    const existingParamNames = (node.data.parameters || []).map((p: ParameterSchema) => Object.keys(p)[0]);
+    const uniqueNewParams = newParameters.filter((param) => {
+      const paramName = Object.keys(param)[0];
+      return !existingParamNames.includes(paramName);
+    });
+
+    onNodeDataChange(node.id, "parameters", [
+      ...(node.data.parameters || []),
+      ...uniqueNewParams
+    ]);
+    
+    setIsToolsModalOpen(false);
+  }, [skills?.data, node.id, node.data.parameters, onNodeDataChange]);
 
   return (
     <VStack spacing={4} align="stretch">
@@ -129,78 +149,83 @@ const ParameterExtractorNodeProperties: React.FC<ParameterExtractorNodePropertie
           <Text fontWeight="bold" color="gray.700">
             {t("workflow.nodes.parameterExtractor.parameters")}:
           </Text>
-          <Button
-            leftIcon={<FaPlus />}
-            onClick={handleAddParameter}
-            colorScheme="blue"
-            variant="ghost"
-            size="sm"
-            transition="all 0.2s"
-            _hover={{
-              bg: "blue.50",
-              transform: "translateY(-1px)",
-              boxShadow: "sm",
-            }}
-          >
-            {t("workflow.nodes.parameterExtractor.addParameter")}
-          </Button>
+          <HStack spacing={2}>
+            <Tooltip label={t("workflow.nodes.parameterExtractor.importFromTool")}>
+              <IconButton
+                aria-label="Import from tool"
+                icon={<FaFileImport />}
+                onClick={handleImportFromTool}
+                colorScheme="blue"
+                variant="ghost"
+                size="sm"
+              />
+            </Tooltip>
+            <Tooltip label={t("workflow.nodes.parameterExtractor.addParameter")}>
+              <IconButton
+                aria-label="Add parameter"
+                icon={<FaPlus />}
+                onClick={handleAddParameter}
+                colorScheme="blue"
+                variant="ghost"
+                size="sm"
+              />
+            </Tooltip>
+          </HStack>
         </HStack>
         <VStack spacing={4} align="stretch">
-          {node.data.parameters?.map((parameter: Parameter) => (
-            <Box
-              key={parameter.parameter_id}
-              borderWidth="1px"
-              borderColor="gray.200"
-              borderRadius="md"
-              p={3}
-              bg="ui.inputbgcolor"
-              transition="all 0.2s"
-              _hover={{
-                borderColor: "blue.300",
-                boxShadow: "md",
-              }}
-            >
-              <HStack justify="space-between" mb={2}>
-                <HStack spacing={2}>
-                  <Text fontSize="sm" fontWeight="500">
-                    {parameter.name || t("workflow.nodes.parameterExtractor.untitled")}
-                    {parameter.required && (
-                      <Text as="span" color="red.500" ml={1}>
-                        *
-                      </Text>
-                    )}
-                  </Text>
-                  <Text fontSize="sm" color="gray.500">
-                    ({parameter.type})
-                  </Text>
+          {node.data.parameters?.map((parameter: ParameterSchema) => {
+            const paramName = Object.keys(parameter)[0];
+            const paramData = parameter[paramName];
+            return (
+              <Box
+                key={paramName}
+                borderWidth="1px"
+                borderColor="gray.200"
+                borderRadius="md"
+                p={3}
+                bg="ui.inputbgcolor"
+              >
+                <HStack justify="space-between" mb={2}>
+                  <HStack spacing={2}>
+                    <Text fontSize="sm" fontWeight="500">
+                      {paramName}
+                      {paramData.required && (
+                        <Text as="span" color="red.500" ml={1}>
+                          *
+                        </Text>
+                      )}
+                    </Text>
+                    <Text fontSize="sm" color="gray.500">
+                      ({paramData.type})
+                    </Text>
+                  </HStack>
+                  <HStack>
+                    <IconButton
+                      aria-label="Edit parameter"
+                      icon={<FaEdit />}
+                      size="xs"
+                      colorScheme="blue"
+                      variant="ghost"
+                      onClick={() => handleEditParameter({ [paramName]: paramData })}
+                    />
+                    <IconButton
+                      aria-label="Delete parameter"
+                      icon={<FaTrash />}
+                      size="xs"
+                      colorScheme="red"
+                      variant="ghost"
+                      onClick={() => handleRemoveParameter(paramName)}
+                    />
+                  </HStack>
                 </HStack>
-                <HStack>
-                  <IconButton
-                    aria-label={t("workflow.nodes.parameterExtractor.editParameter")}
-                    icon={<FaEdit />}
-                    size="xs"
-                    colorScheme="blue"
-                    variant="ghost"
-                    onClick={() => handleEditParameter(parameter)}
-                  />
-                  <IconButton
-                    aria-label={t("workflow.common.delete")}
-                    icon={<FaTrash />}
-                    size="xs"
-                    colorScheme="red"
-                    variant="ghost"
-                    onClick={() => handleRemoveParameter(parameter.parameter_id)}
-                    isDisabled={node.data.parameters.length <= 1}
-                  />
-                </HStack>
-              </HStack>
-              {parameter.description && (
-                <Text fontSize="sm" color="gray.600">
-                  {parameter.description}
-                </Text>
-              )}
-            </Box>
-          ))}
+                {paramData.description && (
+                  <Text fontSize="sm" color="gray.600">
+                    {paramData.description}
+                  </Text>
+                )}
+              </Box>
+            );
+          })}
         </VStack>
       </Box>
 
@@ -223,7 +248,17 @@ const ParameterExtractorNodeProperties: React.FC<ParameterExtractorNodePropertie
         onSave={handleSaveParameter}
         parameter={editingParameter}
         isEdit={!!editingParameter}
+        existingParameters={node.data.parameters || []}
       />
+
+      {isToolsModalOpen && (
+        <ToolsList
+          skills={skills?.data || []}
+          onClose={() => setIsToolsModalOpen(false)}
+          onAddTool={handleToolSelect}
+          selectedTools={[]}
+        />
+      )}
     </VStack>
   );
 };
