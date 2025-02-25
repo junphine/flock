@@ -9,6 +9,7 @@ import {
   FaCodeBranch,
   FaUserCog,
   FaProjectDiagram,
+  FaCrosshairs ,
 } from "react-icons/fa";
 import { FaBookAtlas, FaPeopleGroup } from "react-icons/fa6";
 import { TfiGithub } from "react-icons/tfi";
@@ -30,6 +31,7 @@ import IfElseNodeProperties from "./IfElse/IfElseNodeProperties";
 import { LogicalOperator } from "../types";
 import HumanNodeProperties from "./Human/HumanNodeProperties";
 import SubgraphNodeProperties from "./Subgraph/SubgraphNodeProperties";
+import ParameterExtractorNodeProperties from "./ParameterExtractor/ParameterExtractorNodeProperties";
 
 interface NodeConfigItem {
   display: string;
@@ -286,6 +288,30 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     },
     inputVariables: ["Input"],
     outputVariables: ["response"],
+  },
+  parameterExtractor: {
+    display: "Parameter Extractor",
+    icon: FaCrosshairs,
+    colorScheme: "cyan",
+    properties: ParameterExtractorNodeProperties,
+    allowedConnections: {
+      sources: ["right"],
+      targets: ["left"],
+    },
+    initialData: {
+      model: "glm-4-flash",
+      parameters: [
+        { 
+          parameter_id: uuidv4(),
+          name: "",
+          type: "string",
+          required: true
+        }
+      ],
+      toolImport: null
+    },
+    inputVariables: ["Input"],
+    outputVariables: ["parameters"],
   },
 };
 
