@@ -10,10 +10,10 @@ import { nodeConfig } from "../nodeConfig";
 const { icon: Icon, colorScheme } = nodeConfig.llm;
 
 const LLMNode: React.FC<NodeProps> = (props) => {
-  const [providerName, setProviderName] = useState<string>(props.data.model);
+  const [providerName, setProviderName] = useState<string>(props.data.model!);
 
   useEffect(() => {
-    setProviderName(props.data.model);
+    setProviderName(props.data.model!);
   }, [props.data]);
 
   const memoizedIcon = useMemo(
@@ -22,14 +22,12 @@ const LLMNode: React.FC<NodeProps> = (props) => {
     ),
     [providerName]
   );
-
   const handleStyle = {
     background: "var(--chakra-colors-ui-wfhandlecolor)",
     width: 8,
     height: 8,
     border: "2px solid white",
     transition: "all 0.2s",
-    // top: "30px",
   };
 
   return (
@@ -86,6 +84,7 @@ const LLMNode: React.FC<NodeProps> = (props) => {
 export default React.memo(LLMNode, (prevProps, nextProps) => {
   return (
     prevProps.data.modelprovider_name === nextProps.data.modelprovider_name &&
-    prevProps.data.model === nextProps.data.model
+    prevProps.data.model === nextProps.data.model &&
+    prevProps.data.label === nextProps.data.label
   );
 });

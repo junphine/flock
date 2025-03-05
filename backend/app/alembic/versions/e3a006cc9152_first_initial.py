@@ -1,19 +1,18 @@
-"""first generate
+"""first initial
 
-Revision ID: 4d6839c8481b
+Revision ID: e3a006cc9152
 Revises: 
-Create Date: 2024-10-18 15:13:30.619597
+Create Date: 2025-02-18 10:27:35.699451
 
 """
 
 import sqlalchemy as sa
 import sqlmodel.sql.sqltypes
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
-from alembic import op
-
 # revision identifiers, used by Alembic.
-revision = "4d6839c8481b"
+revision = "e3a006cc9152"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -60,6 +59,12 @@ def upgrade():
         sa.Column("categories", sa.ARRAY(sa.String()), nullable=True),
         sa.Column("capabilities", sa.ARRAY(sa.String()), nullable=True),
         sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column(
+            "metadata",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default="{}",
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["provider_id"],
             ["modelprovider.id"],
@@ -121,6 +126,20 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
+        "apikey",
+        sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("hashed_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("short_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("team_id", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["team_id"],
+            ["team.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
         "graph",
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
@@ -168,10 +187,6 @@ def upgrade():
         sa.Column("source", sa.Integer(), nullable=True),
         sa.Column("provider", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("model", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("openai_api_key", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column(
-            "openai_api_base", sqlmodel.sql.sqltypes.AutoString(), nullable=False
-        ),
         sa.Column("temperature", sa.Float(), nullable=False),
         sa.Column("interrupt", sa.Boolean(), nullable=False),
         sa.Column("id", sa.Integer(), nullable=False),
@@ -182,6 +197,43 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name", "belongs_to", name="unique_team_and_name"),
+    )
+    op.create_table(
+        "subgraph",
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("config", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "metadata",
+            postgresql.JSONB(astext_type=sa.Text()),
+            server_default="{}",
+            nullable=False,
+        ),
+        sa.Column("is_public", sa.Boolean(), nullable=False),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("owner_id", sa.Integer(), nullable=False),
+        sa.Column("team_id", sa.Integer(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["owner_id"],
+            ["user.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["team_id"],
+            ["team.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "thread",
@@ -299,8 +351,10 @@ def downgrade():
     op.drop_table("checkpoint_blobs")
     op.drop_index(op.f("ix_thread_id"), table_name="thread")
     op.drop_table("thread")
+    op.drop_table("subgraph")
     op.drop_table("member")
     op.drop_table("graph")
+    op.drop_table("apikey")
     op.drop_table("upload")
     op.drop_table("team")
     op.drop_table("skill")

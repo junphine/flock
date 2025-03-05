@@ -4,7 +4,6 @@ import type { GraphsOut, InterruptType } from "@/client";
 
 export interface NodeData {
   label: string;
-  customName?: string;
   onChange?: (key: string, value: any) => void;
   model?: string;
   temperature?: number;
@@ -104,4 +103,19 @@ export interface HumanNodeData extends NodeData {
     [key: string]: string;
   };
   title?: string;
+}
+
+export interface ParameterSchema {
+  [key: string]: {
+    type: string;  // "str" | "number"
+    required: boolean;
+    description: string;
+  }
+}
+
+export interface ParameterExtractorNodeData {
+  model: string;
+  parameters: ParameterSchema[];
+  toolImport: any | null;
+  instruction?: string;
 }

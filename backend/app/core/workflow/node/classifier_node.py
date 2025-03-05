@@ -40,9 +40,9 @@ Assistant:{{"keywords": ["bad service", "slow", "food", "tip", "terrible", "wait
 
 QUESTION_CLASSIFIER_USER_PROMPT = """
  ### Input
-    {input_text},
-    {categories},
-   ### Assistant Output
+    input_text: {input_text},
+    categories: {categories},
+ ### Assistant Output
     Please classify the above text into exactly one of the listed categories.
     Return only the category name, nothing else.
 """
@@ -59,10 +59,8 @@ class ClassifierNode:
         input: str = "",
     ):
         self.node_id = node_id
-
         self.categories = categories
         self.input = input
-
         self.model_info = get_model_info(model_name)
 
     async def work(
@@ -74,7 +72,7 @@ class ClassifierNode:
 
         # Parse input variable if exists
         input_text = (
-            parse_variables(self.input, state["node_outputs"]) if self.input else ""
+            parse_variables(self.input, state["node_outputs"]) if self.input else None
         )
         if not input_text and state.get("all_messages"):
             input_text = state["all_messages"][-1].content

@@ -1,6 +1,7 @@
 import { Icon, type IconProps, createIcon } from "@chakra-ui/icons";
 
 import { SiliconFlowIcon, ZhipuAIIcon } from "../models";
+import { FaProjectDiagram } from "react-icons/fa";
 
 const Serper = createIcon({
   displayName: "Serper",
@@ -408,6 +409,7 @@ const iconMap: { [key: string]: React.FC } = {
   qingyan_assistant: ZhipuAIIcon,
   web_search_pro: ZhipuAIIcon,
   serper_search: Serper,
+  workflow: FaProjectDiagram,
 };
 
 const DefaultIcon = Wikipedia;

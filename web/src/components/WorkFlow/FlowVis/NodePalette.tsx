@@ -19,8 +19,6 @@ const NodePalette: React.FC = () => {
     >
       {/* 主面板 */}
       <Box
-        h="full"
-        maxH="full"
         bg="white"
         borderRadius="xl"
         transition="all 0.3s ease"
@@ -29,18 +27,20 @@ const NodePalette: React.FC = () => {
         border="1px solid"
         borderColor="gray.100"
         overflow="hidden"
+        h="100%"
         boxShadow="sm"
         _hover={{
           boxShadow: "md",
         }}
       >
         <Box
-          overflow="hidden"
-          h="full"
           opacity={isCollapsed ? 0 : 1}
           visibility={isCollapsed ? "hidden" : "visible"}
           transition="all 0.3s ease"
           pointerEvents={isCollapsed ? "none" : "auto"}
+          overflow="hidden"
+          h="calc(100vh - 100px)"
+          maxH="calc(100vh - 100px)"
         >
           <SharedNodeMenu onNodeSelect={onNodeSelect} isDraggable={true} />
         </Box>
@@ -71,7 +71,7 @@ const NodePalette: React.FC = () => {
           bg="white"
           color="gray.600"
           transition="all 0.2s"
-          _hover={{ 
+          _hover={{
             bg: "gray.50",
             transform: "scale(1.1)",
             color: "ui.main",

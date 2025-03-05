@@ -1,9 +1,6 @@
 import time
-from functools import cache
 from typing import Any
 
-from langchain.tools import BaseTool
-from langchain.tools.retriever import create_retriever_tool
 from langchain_core.messages import AIMessage, AnyMessage
 from langchain_core.runnables import RunnableLambda
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -11,76 +8,27 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import ToolNode
 
-from app.core.rag.qdrant import QdrantStore
-from app.core.tools import managed_tools
+from app.core.workflow.node.parameter_extractor_node import ParameterExtractorNode
+from app.core.workflow.node.plugin_node import PluginNode
+from app.core.workflow.utils.tools_utils import get_retrieval_tool, get_tool
+from app.models import InterruptType
 
 from ..state import WorkflowTeamState
 from .node.answer_node import AnswerNode
 from .node.classifier_node import ClassifierNode
 from .node.code.code_node import CodeNode
 from .node.crewai_node import CrewAINode
+from .node.human_node import HumanNode
 from .node.ifelse.ifelse_node import IfElseNode
 from .node.input_node import InputNode
 from .node.llm_node import LLMNode
 from .node.retrieval_node import RetrievalNode
 from .node.subgraph_node import SubgraphNode
-from .node.human_node import HumanNode
-from app.models import InterruptDecision, InterruptType
-
-
-def create_subgraph(subgraph_config: dict[str, Any]) -> CompiledGraph:
-    subgraph_builder = StateGraph(WorkflowTeamState)
-
-    # 添加subgraph的节点
-    for node in subgraph_config["nodes"]:
-        node_id = node["id"]
-        node_type = node["type"]
-        node_data = node["data"]
-
-        if node_type == "answer":
-            _add_answer_node(subgraph_builder, node_id, node_data)
-        elif node_type == "retrieval":
-            _add_retrieval_node(subgraph_builder, node_id, node_data)
-        elif node_type == "llm":
-            _add_llm_node(
-                subgraph_builder,
-                node_id,
-                node_data,
-                subgraph_config["nodes"],
-                subgraph_config["edges"],
-                False,
-                False,
-                {},
-            )
-        elif node_type in ["tool", "toolretrieval"]:
-            _add_tool_node(subgraph_builder, node_id, node_type, node_data)
-
-    # 添加subgraph的边
-    for edge in subgraph_config["edges"]:
-        _add_edge(subgraph_builder, edge, subgraph_config["nodes"], {})
-
-    # 设置入口点并编译subgraph
-    subgraph_builder.set_entry_point("InputNode")
-    return subgraph_builder.compile()
 
 
 def validate_config(config: dict[str, Any]) -> bool:
     required_keys = ["id", "name", "nodes", "edges", "metadata"]
     return all(key in config for key in required_keys)
-
-
-@cache
-def get_tool(tool_name: str) -> BaseTool:
-    for _, tool in managed_tools.items():
-        if tool.display_name == tool_name:
-            return tool.tool
-    raise ValueError(f"Unknown tool: {tool_name}")
-
-
-@cache
-def get_retrieval_tool(tool_name: str, description: str, owner_id: int, kb_id: int):
-    retriever = QdrantStore().retriever(owner_id, kb_id)
-    return create_retriever_tool(retriever, name=tool_name, description=description)
 
 
 # 添加一个全局变量来存储工具名称到节点ID的映射
@@ -115,6 +63,23 @@ def should_continue_ifelse(state: WorkflowTeamState) -> str:
             if "result" in outputs:
                 return outputs["result"]
     return "false_else"  # 默认返回 ELSE 分支
+
+
+def _add_tools_conditional_edges(graph_builder, conditional_edges, nodes):
+    """Add conditional edges to graph"""
+    for node_id, conditions in conditional_edges.items():
+        edges_dict = {
+            "default": next(iter(conditions["default"].values()), END),
+            **conditions["call_tools"],
+        }
+
+        if conditions["ask-human"]:
+            edges_dict["ask-human"] = next(iter(conditions["ask-human"].values()))
+
+        if edges_dict != {"default": END}:
+            graph_builder.add_conditional_edges(
+                node_id, should_continue_tools, edges_dict
+            )
 
 
 def _add_classifier_conditional_edges(
@@ -230,10 +195,9 @@ def initialize_graph(
             node_data = node["data"]
 
             if node_type == "crewai":
-                _add_crewai_node(graph_builder, node_id, node_type, node_data)
+                _add_crewai_node(graph_builder, node_id, node_data)
             elif node_type == "subgraph":
-                subgraph = create_subgraph(node_data)
-                graph_builder.add_node(node_id, subgraph)
+                _add_subgraph_node(graph_builder, node_id, node_data)
             elif node_type == "answer":
                 _add_answer_node(graph_builder, node_id, node_data)
             elif node_type == "retrieval":
@@ -259,13 +223,17 @@ def initialize_graph(
                 _add_ifelse_node(graph_builder, node_id, node_data)
             elif node_type == "human":
                 _add_human_node(graph_builder, node_id, node_data)
+            elif node_type == "parameterExtractor":
+                _add_parameter_extractor_node(graph_builder, node_id, node_data)
+            elif node_type == "plugin":
+                _add_plugin_node(graph_builder, node_id, node_data)
 
         # Add edges
         for edge in edges:
             _add_edge(graph_builder, edge, nodes, conditional_edges)
 
         # Add conditional edges
-        _add_conditional_edges(graph_builder, conditional_edges, nodes)
+        _add_tools_conditional_edges(graph_builder, conditional_edges, nodes)
 
         # 添加分类器节点的条件边
         classifier_nodes = [
@@ -411,8 +379,7 @@ def _add_llm_node(
     tools_to_bind = _get_tools_to_bind(node_id, edges, nodes)
 
     if node_data.get("type") == "subgraph":
-        subgraph = create_subgraph(node_data["subgraph_config"])
-        graph_builder.add_node(node_id, SubgraphNode(subgraph).work)
+        pass
     else:
         graph_builder.add_node(
             node_id,
@@ -431,25 +398,46 @@ def _add_llm_node(
 
 def _get_tools_to_bind(node_id, edges, nodes):
     tools_to_bind = []
-    for edge in edges:
-        if edge["source"] == node_id:
-            target_node = next((n for n in nodes if n["id"] == edge["target"]), None)
-            if target_node and target_node["type"] == "tool":
-                tools_to_bind.extend(
-                    [get_tool(tool_name) for tool_name in target_node["data"]["tools"]]
+    # 存储已处理过的节点，避免循环
+    processed_nodes = set()
+
+    def get_connected_tools(current_node_id, processed):
+        if current_node_id in processed:
+            return
+        processed.add(current_node_id)
+
+        for edge in edges:
+            if edge["source"] == current_node_id:
+                target_node = next(
+                    (n for n in nodes if n["id"] == edge["target"]), None
                 )
-            if target_node and target_node["type"] == "toolretrieval":
-                tools_to_bind.extend(
-                    [
-                        get_retrieval_tool(
-                            tool["name"],
-                            tool["description"],
-                            tool["usr_id"],
-                            tool["kb_id"],
+                if target_node:
+                    # 如果是工具节点，添加工具
+                    if target_node["type"] == "tool":
+                        tools_to_bind.extend(
+                            [
+                                get_tool(tool_name)
+                                for tool_name in target_node["data"]["tools"]
+                            ]
                         )
-                        for tool in target_node["data"]["tools"]
-                    ]
-                )
+                    elif target_node["type"] == "toolretrieval":
+                        tools_to_bind.extend(
+                            [
+                                get_retrieval_tool(
+                                    tool["name"],
+                                    tool["description"],
+                                    tool["usr_id"],
+                                    tool["kb_id"],
+                                )
+                                for tool in target_node["data"]["tools"]
+                            ]
+                        )
+                    # 如果是human节点，继续遍历其后续节点
+                    elif target_node["type"] == "human":
+                        get_connected_tools(target_node["id"], processed)
+
+    # 从起始节点开始遍历
+    get_connected_tools(node_id, processed_nodes)
     return tools_to_bind
 
 
@@ -523,9 +511,11 @@ def _add_edge(graph_builder, edge, nodes, conditional_edges):
         else:
             graph_builder.add_edge(edge["source"], edge["target"])
     elif source_node["type"] == "subgraph":
-        graph_builder.add_edge(edge["source"], edge["target"])
-    elif target_node["type"] == "subgraph":
-        graph_builder.add_edge(edge["source"], edge["target"])
+        if target_node["type"] == "end":
+            graph_builder.add_edge(edge["source"], END)
+        else:
+            graph_builder.add_edge(edge["source"], edge["target"])
+
     elif source_node["type"] == "code":
         if target_node["type"] == "end":
             graph_builder.add_edge(edge["source"], END)
@@ -542,26 +532,19 @@ def _add_edge(graph_builder, edge, nodes, conditional_edges):
             graph_builder.add_edge(edge["source"], END)
         else:
             graph_builder.add_edge(edge["source"], edge["target"])
+    elif source_node["type"] == "parameterExtractor":
+        if target_node["type"] == "end":
+            graph_builder.add_edge(edge["source"], END)
+        else:
+            graph_builder.add_edge(edge["source"], edge["target"])
+    elif source_node["type"] == "plugin":
+        if target_node["type"] == "end":
+            graph_builder.add_edge(edge["source"], END)
+        else:
+            graph_builder.add_edge(edge["source"], edge["target"])
 
 
-def _add_conditional_edges(graph_builder, conditional_edges, nodes):
-    """Add conditional edges to graph"""
-    for node_id, conditions in conditional_edges.items():
-        edges_dict = {
-            "default": next(iter(conditions["default"].values()), END),
-            **conditions["call_tools"],
-        }
-
-        if conditions["ask-human"]:
-            edges_dict["ask-human"] = next(iter(conditions["ask-human"].values()))
-
-        if edges_dict != {"default": END}:
-            graph_builder.add_conditional_edges(
-                node_id, should_continue_tools, edges_dict
-            )
-
-
-def _add_crewai_node(graph_builder, node_id, node_type, node_data):
+def _add_crewai_node(graph_builder, node_id, node_data):
     """Add a CrewAI node to the graph"""
     # 确保必要的配置存在
     if not node_data.get("agents"):
@@ -605,7 +588,7 @@ def _add_classifier_node(graph_builder, node_id, node_data):
             node_id=node_id,
             model_name=node_data["model"],
             categories=node_data["categories"],
-            input=node_data.get("input", ""),
+            input=node_data["Input"],
         ).work,
     )
 
@@ -651,4 +634,35 @@ def _add_human_node(graph_builder, node_id: str, node_data: dict[str, Any]):
                 "interaction_type", InterruptType.TOOL_REVIEW
             ),
         ).work,
+    )
+
+
+def _add_subgraph_node(graph_builder, node_id: str, node_data: dict):
+    """Add a subgraph node to the parent graph"""
+    graph_builder.add_node(
+        node_id,
+        SubgraphNode(
+            node_id=node_id,
+            subgraph_id=node_data["subgraphId"],
+            input=node_data["Input"],
+        ).work,
+    )
+
+
+def _add_parameter_extractor_node(graph_builder, node_id, node_data):
+    graph_builder.add_node(
+        node_id,
+        ParameterExtractorNode(
+            node_id=node_id,
+            model_name=node_data["model"],
+            parameter_schema=node_data["parameters"],
+            input=node_data["Input"],
+            instruction=node_data.get("instruction", ""),
+        ).work,
+    )
+
+
+def _add_plugin_node(graph_builder, node_id, node_data):
+    graph_builder.add_node(
+        node_id, PluginNode(node_id, node_data["toolName"], node_data["args"]).work
     )

@@ -4,19 +4,12 @@ from typing import Any
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 from pydantic import Field as PydanticField
-from sqlalchemy import (
-    ARRAY,
-    JSON,
-    Column,
-    DateTime,
-    PrimaryKeyConstraint,
-    String,
-    UniqueConstraint,
-    func,
-)
+from pydantic import model_validator
+from sqlalchemy import ARRAY, JSON, Column, DateTime
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import PrimaryKeyConstraint, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -97,6 +90,7 @@ class User(UserBase, table=True):
     skills: list["Skill"] = Relationship(back_populates="owner")
     uploads: list["Upload"] = Relationship(back_populates="owner")
     graphs: list["Graph"] = Relationship(back_populates="owner")
+    subgraphs: list["Subgraph"] = Relationship(back_populates="owner")
     language: str = Field(default="en-US")
 
 
@@ -138,10 +132,12 @@ class ChatMessage(BaseModel):
     content: str
     imgdata: str | None = None  # 添加 imgdata 字段
 
+
 class InterruptType(str, Enum):
     TOOL_REVIEW = "tool_review"
     OUTPUT_REVIEW = "output_review"
     CONTEXT_INPUT = "context_input"
+
 
 class InterruptDecision(str, Enum):
     APPROVED = "approved"
@@ -155,7 +151,7 @@ class InterruptDecision(str, Enum):
 
 
 class Interrupt(BaseModel):
-    interrupt_type: InterruptType | None = None
+    interaction_type: InterruptType | None = None
     decision: InterruptDecision
     tool_message: str | None = None
 
@@ -190,6 +186,9 @@ class Team(TeamBase, table=True):
         back_populates="team", sa_relationship_kwargs={"cascade": "delete"}
     )
     graphs: list["Graph"] = Relationship(
+        back_populates="team", sa_relationship_kwargs={"cascade": "delete"}
+    )
+    subgraphs: list["Subgraph"] = Relationship(
         back_populates="team", sa_relationship_kwargs={"cascade": "delete"}
     )
     apikeys: list["ApiKey"] = Relationship(
@@ -790,4 +789,66 @@ class ApiKeysOutPublic(SQLModel):
     count: int
 
 
+# ==============Subgraph=====================
 
+
+class SubgraphBase(SQLModel):
+    name: str = PydanticField(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
+    description: str | None = None
+    config: dict[Any, Any] = Field(default_factory=dict, sa_column=Column(JSONB))
+    metadata_: dict[Any, Any] = Field(
+        default_factory=dict,
+        sa_column=Column("metadata", JSONB, nullable=False, server_default="{}"),
+    )
+    is_public: bool = Field(default=False)  # 是否公开，可供其他用户使用
+
+
+class SubgraphCreate(SubgraphBase):
+    created_at: datetime
+    updated_at: datetime
+    team_id: int
+
+
+class SubgraphUpdate(SubgraphBase):
+    name: str | None = None
+    updated_at: datetime
+    id: int | None = None
+    team_id: int | None = None
+
+
+class Subgraph(SubgraphBase, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    owner_id: int | None = Field(default=None, foreign_key="user.id", nullable=False)
+    owner: User | None = Relationship(back_populates="subgraphs")
+    team_id: int = Field(foreign_key="team.id", nullable=False)
+    team: Team = Relationship(back_populates="subgraphs")
+    created_at: datetime | None = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=func.now(),
+            server_default=func.now(),
+        )
+    )
+    updated_at: datetime | None = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=func.now(),
+            onupdate=func.now(),
+            server_default=func.now(),
+        )
+    )
+
+
+class SubgraphOut(SubgraphBase):
+    id: int
+    owner_id: int
+    team_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class SubgraphsOut(SQLModel):
+    data: list[SubgraphOut]
+    count: int

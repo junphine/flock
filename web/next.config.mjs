@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
-
-// next.config.js
-
-const nextConfig = {  
+const nextConfig = {
+  output: 'standalone',
+  outputFileTracing: true,
 };
 
 export default nextConfig;

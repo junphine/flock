@@ -8,11 +8,13 @@ import {
   FaCode,
   FaCodeBranch,
   FaUserCog,
+  FaProjectDiagram,
+  FaCrosshairs ,
 } from "react-icons/fa";
 import { FaBookAtlas, FaPeopleGroup } from "react-icons/fa6";
 import { TfiGithub } from "react-icons/tfi";
 import { v4 as uuidv4 } from "uuid";
-
+import { LuBrainCircuit } from "react-icons/lu";
 import AnswerNodeProperties from "./Answer/AnswerNodeProperties";
 import EndNodeProperties from "./End/EndNodeProperties";
 import LLMNodeProperties from "./LLM/LLMNodeProperties";
@@ -23,11 +25,13 @@ import StartNodeProperties from "./Start/StartNodeProperties";
 import ToolNodeProperties from "./Tool/ToolNodeProperties";
 import CrewAINodeProperties from "./CrewAI/CrewAINodeProperties";
 import ClassifierNodeProperties from "./Classifier/ClassifierNodeProperties";
-import { LuBrainCircuit } from "react-icons/lu";
+
 import CodeNodeProperties from "./Code/CodeNodeProperties";
 import IfElseNodeProperties from "./IfElse/IfElseNodeProperties";
 import { LogicalOperator } from "../types";
 import HumanNodeProperties from "./Human/HumanNodeProperties";
+import SubgraphNodeProperties from "./Subgraph/SubgraphNodeProperties";
+import ParameterExtractorNodeProperties from "./ParameterExtractor/ParameterExtractorNodeProperties";
 
 interface NodeConfigItem {
   display: string;
@@ -107,7 +111,7 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     properties: PluginNodeProperties,
     initialData: {
       toolName: "",
-      args: {},
+      args: "",
     },
     allowedConnections: {
       sources: ["right"],
@@ -260,13 +264,47 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     initialData: {
       interaction_type: "tool_review",
       routes: {
-        approve: "",
-        reject: "",
+        approved: "",
+        rejected: "",
         update: "",
         feedback: "",
       },
       title: "",
     },
+  },
+  subgraph: {
+    display: "Subgraph",
+    icon: FaProjectDiagram,
+    colorScheme: "teal",
+    properties: SubgraphNodeProperties,
+    allowedConnections: {
+      sources: ["right"],
+      targets: ["left"],
+    },
+
+    initialData: {
+      subgraphId: "",
+      description: "",
+    },
+    inputVariables: ["Input"],
+    outputVariables: ["response"],
+  },
+  parameterExtractor: {
+    display: "Parameter Extractor",
+    icon: FaCrosshairs,
+    colorScheme: "cyan",
+    properties: ParameterExtractorNodeProperties,
+    allowedConnections: {
+      sources: ["right"],
+      targets: ["left"],
+    },
+    initialData: {
+      model: "glm-4-flash",
+      parameters: [],
+      toolImport: null
+    },
+    inputVariables: ["Input"],
+    outputVariables: ["parameters"],
   },
 };
 

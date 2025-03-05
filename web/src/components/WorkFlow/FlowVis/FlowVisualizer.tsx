@@ -56,9 +56,9 @@ import SharedNodeMenu from "./SharedNodeMenu";
 
 import useWorkflowStore from "@/stores/workflowStore";
 import CustomButton from "@/components/Common/CustomButton";
-import ApiKeyButton from "@/components/Teams/Apikey/ApiKeyManageButton";
 import { useTranslation } from "react-i18next";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import PublishMenu from "./PublishMenu";
 
 const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
   nodeTypes,
@@ -366,7 +366,7 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
 
       let newNode: CustomNode;
 
-      if (type !== "plugin") {
+      if (type !== "plugin" && type !== "subgraph") {
         const baseLabel = `${nodeConfig[type].display}`;
         const uniqueName = generateUniqueName(baseLabel);
 
@@ -375,15 +375,14 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
           type: type,
           position,
           data: {
-            label: uniqueName, // 使用生成的唯一名称
-            customName: uniqueName,
+            label: uniqueName,
             onChange: (key: string, value: any) =>
               onNodeDataChange(`${type}-${nodes.length + 1}`, key, value),
             ...nodeConfig[type].initialData,
           },
         };
-      } else {
-        // 处理其他类型的节点（如 tools）
+      } else if (type === "plugin") {
+        // 处理插件类型的节点
         newNode = {
           id: `${tool.display_name}-${nodes.length + 1}`, // 确保每个插件节点唯一
           type: "plugin",
@@ -391,8 +390,20 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
           data: {
             label: tool.display_name,
             toolName: tool.display_name,
-            args: {},
+            args: "",
             ...tool.initialData,
+          },
+        };
+      } else {
+        // 处理 subgraph 类型的节点
+        newNode = {
+          id: `subgraph-${nodes.length + 1}`,
+          type: "subgraph",
+          position,
+          data: {
+            label: tool.name,
+            subgraphId: tool.id,
+            description: tool.description,
           },
         };
       }
@@ -549,7 +560,7 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
           data: {
             label: tool.display_name,
             toolName: tool.display_name,
-            args: {},
+            args: "",
             ...tool.initialData,
           },
         };
@@ -562,9 +573,6 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
           position: { x: newNodeX, y: newNodeY },
           data: {
             label: generateUniqueName(nodeConfig[nodeType as NodeType].display),
-            customName: generateUniqueName(
-              nodeConfig[nodeType as NodeType].display
-            ),
             onChange: (key: string, value: any) =>
               onNodeDataChange(newNodeId, key, value),
             ...nodeConfig[nodeType as NodeType].initialData,
@@ -1015,9 +1023,16 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
             rightIcon={<VscDebugAlt />}
             onClick={() => setShowDebugPreview(true)}
           />
-          <ApiKeyButton teamId={teamId.toString()} />
+
+          <PublishMenu
+            teamId={teamId.toString()}
+            workflowConfig={{
+              nodes,
+              edges,
+            }}
+          />
           <CustomButton
-            text={t("workflow.flowVisualizer.actions.deploy")}
+            text={t("workflow.flowVisualizer.actions.save")}
             variant="blue"
             rightIcon={<MdBuild />}
             onClick={onSave}
@@ -1030,9 +1045,21 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
       {/* 属性面板 */}
       {selectedNodeId && (
         <Box
-          w={selectedNode?.type === "code" || selectedNode?.type === "ifelse" ? "450px" : "330px"}
-          minW={selectedNode?.type === "code" || selectedNode?.type === "ifelse" ? "450px" : "330px"}
-          maxW={selectedNode?.type === "code" || selectedNode?.type === "ifelse" ? "450px" : "330px"}
+          w={
+            selectedNode?.type === "code" || selectedNode?.type === "ifelse"
+              ? "450px"
+              : "330px"
+          }
+          minW={
+            selectedNode?.type === "code" || selectedNode?.type === "ifelse"
+              ? "450px"
+              : "330px"
+          }
+          maxW={
+            selectedNode?.type === "code" || selectedNode?.type === "ifelse"
+              ? "450px"
+              : "330px"
+          }
           bg="white"
           p={6}
           borderRadius="xl"
@@ -1116,14 +1143,14 @@ const FlowVisualizer: React.FC<FlowVisualizerProps> = ({
           left={`${menuPosition.x}px`}
           top={`${menuPosition.y}px`}
           zIndex={1000}
-          maxH="full"
-          overflowY="auto"
           bg="white"
           borderRadius="xl"
           boxShadow="lg"
           border="1px solid"
           borderColor="gray.100"
           transition="all 0.2s"
+          h="calc(100vh - 300px)"
+          maxH="calc(100vh - 300px)"
         >
           <SharedNodeMenu onNodeSelect={addNodeToEdge} isDraggable={false} />
         </Box>

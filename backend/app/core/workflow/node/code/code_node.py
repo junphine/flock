@@ -9,9 +9,10 @@ import os
 import ast
 from textwrap import dedent
 
-import docker
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
+
+import docker
 
 from ....state import (
     ReturnWorkflowTeamState,
@@ -339,7 +340,7 @@ class CodeDockerExecutor(CodeExecutor):
         self,
         timeout: int = 30,
         memory_limit: str = "256m",
-        image_tag: str = "code-interpreter:latest",
+        image_tag: str = "flock-code-interpreter:latest",
         pool_size: int = 3,
     ):
         if not hasattr(self, "initialized"):
