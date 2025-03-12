@@ -1,4 +1,20 @@
-import { Box, Text, VStack, useToast, Button, useDisclosure, HStack, IconButton, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, Badge } from "@chakra-ui/react";
+import {
+  Box,
+  Text,
+  VStack,
+  useToast,
+  Button,
+  useDisclosure,
+  HStack,
+  IconButton,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  Badge,
+} from "@chakra-ui/react";
 import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
@@ -10,13 +26,15 @@ import { VariableReference } from "../../FlowVis/variableSystem";
 import VariableSelector from "../../Common/VariableSelector";
 import { useForm } from "react-hook-form";
 import ServerModal from "./ServerModal";
+import { ToolsService } from "@/client/services/ToolsService";
 
 interface ServerConfig {
   name: string;
-  transport: 'stdio' | 'sse';
-  command?: 'python' | 'node';
+  transport: "stdio" | "sse";
+  command?: "python" | "node";
   args?: string[];
   url?: string;
+  tools?: any[];
 }
 
 interface FormValues {
@@ -30,25 +48,21 @@ interface MCPNodePropertiesProps {
   availableVariables: VariableReference[];
 }
 
-const formatScriptPath = (path: string) => {
-  const parts = path.split('/');
-  if (parts.length <= 3) return path;
-  
-  return '.../' + parts.slice(-3).join('/');
-};
-
 const ServerCard: React.FC<{
   server: ServerConfig;
   onEdit: () => void;
   onDelete: () => void;
-}> = ({ server, onEdit, onDelete }) => {
+  tools: any[];
+  isLoadingTools: boolean;
+}> = ({ server, onEdit, onDelete, tools, isLoadingTools }) => {
   const { t } = useTranslation();
-  const transportType = server.transport === "stdio" ? t("workflow.nodes.mcp.serverType.stdio") : t("workflow.nodes.mcp.serverType.sse");
+  const transportType =
+    server.transport === "stdio"
+      ? t("workflow.nodes.mcp.serverType.stdio")
+      : t("workflow.nodes.mcp.serverType.sse");
 
   const getServerDetails = () => {
     if (server.transport === "stdio") {
-      const scriptPath = server.args?.[0] || "";
-      const formattedPath = formatScriptPath(scriptPath);
       return (
         <VStack spacing={2} align="stretch">
           <HStack spacing={2}>
@@ -69,17 +83,47 @@ const ServerCard: React.FC<{
           </HStack>
           <HStack spacing={2} alignItems="flex-start">
             <Text fontSize="xs" color="gray.500" width="100px">
-              {t("workflow.nodes.mcp.scriptPath")}:
+              {t("workflow.nodes.mcp.command")}:
             </Text>
-            <VStack spacing={1} align="stretch">
-              <Text fontSize="xs" fontWeight="500">
-                {server.command}
-              </Text>
-              <Text fontSize="xs" color="gray.600" isTruncated title={scriptPath}>
-                {formattedPath}
-              </Text>
-            </VStack>
+            <Text fontSize="xs" fontWeight="500">
+              {server.command}
+            </Text>
           </HStack>
+          <Box mt={2}>
+            <Text fontSize="xs" color="gray.500" mb={2}>
+              {t("workflow.nodes.mcp.toolsList")}:
+            </Text>
+            {isLoadingTools ? (
+              <Box p={2}>
+                <Text fontSize="xs" color="gray.500">
+                  {t("workflow.nodes.mcp.loadingTools")}
+                </Text>
+              </Box>
+            ) : tools && tools.length > 0 ? (
+              <VStack spacing={2} align="stretch">
+                {tools.map((tool, index) => (
+                  <Box
+                    key={index}
+                    p={2}
+                    borderWidth={1}
+                    borderRadius="sm"
+                    borderColor="gray.200"
+                  >
+                    <Text fontSize="xs" fontWeight="500">
+                      {tool.name}
+                    </Text>
+                    <Text fontSize="xs" color="gray.600">
+                      {tool.description}
+                    </Text>
+                  </Box>
+                ))}
+              </VStack>
+            ) : (
+              <Text fontSize="xs" color="gray.500">
+                {t("workflow.nodes.mcp.noToolsAvailable")}
+              </Text>
+            )}
+          </Box>
         </VStack>
       );
     }
@@ -109,6 +153,41 @@ const ServerCard: React.FC<{
             {server.url}
           </Text>
         </HStack>
+        <Box mt={2}>
+          <Text fontSize="xs" color="gray.500" mb={2}>
+            {t("workflow.nodes.mcp.toolsList")}:
+          </Text>
+          {isLoadingTools ? (
+            <Box p={2}>
+              <Text fontSize="xs" color="gray.500">
+                {t("workflow.nodes.mcp.loadingTools")}
+              </Text>
+            </Box>
+          ) : tools && tools.length > 0 ? (
+            <VStack spacing={2} align="stretch">
+              {tools.map((tool, index) => (
+                <Box
+                  key={index}
+                  p={2}
+                  borderWidth={1}
+                  borderRadius="sm"
+                  borderColor="gray.200"
+                >
+                  <Text fontSize="xs" fontWeight="500">
+                    {tool.name}
+                  </Text>
+                  <Text fontSize="xs" color="gray.600">
+                    {tool.description}
+                  </Text>
+                </Box>
+              ))}
+            </VStack>
+          ) : (
+            <Text fontSize="xs" color="gray.500">
+              {t("workflow.nodes.mcp.noToolsAvailable")}
+            </Text>
+          )}
+        </Box>
       </VStack>
     );
   };
@@ -165,10 +244,21 @@ const MCPNodeProperties: React.FC<MCPNodePropertiesProps> = ({
   const [servers, setServers] = useState<ServerConfig[]>([]);
   const [inputText, setInputText] = useState("");
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
-  const [editingServer, setEditingServer] = useState<ServerConfig | undefined>();
-  const [deletingServer, setDeletingServer] = useState<ServerConfig | undefined>();
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose,
+  } = useDisclosure();
+  const [editingServer, setEditingServer] = useState<
+    ServerConfig | undefined
+  >();
+  const [deletingServer, setDeletingServer] = useState<
+    ServerConfig | undefined
+  >();
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const [isLoadingTools, setIsLoadingTools] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const { control, setValue } = useForm<FormValues>({
     mode: "onBlur",
@@ -181,6 +271,91 @@ const MCPNodeProperties: React.FC<MCPNodePropertiesProps> = ({
 
   const { data: models, isLoading: isLoadingModel } = useModelQuery();
 
+  const updateMCPConfig = useCallback(
+    (newServers: ServerConfig[]) => {
+      const mcp_config = newServers.reduce(
+        (acc, server) => {
+          if (!server.name) return acc;
+
+          if (server.transport === "stdio") {
+            acc[server.name] = {
+              command: server.command || "python",
+              args: server.args || [],
+              transport: "stdio",
+            };
+          } else {
+            acc[server.name] = {
+              url: server.url || "",
+              transport: "sse",
+            };
+          }
+          return acc;
+        },
+        {} as Record<string, any>
+      );
+
+      onNodeDataChange(node.id, "mcp_config", mcp_config);
+    },
+    [node.id, onNodeDataChange]
+  );
+
+  const fetchTools = useCallback(
+    async (serverConfig: ServerConfig) => {
+      setIsLoadingTools((prev) => ({ ...prev, [serverConfig.name]: true }));
+      try {
+        const mcp_config = {
+          [serverConfig.name]:
+            serverConfig.transport === "stdio"
+              ? {
+                  command: serverConfig.command || "python",
+                  args: serverConfig.args || [],
+                  transport: "stdio",
+                }
+              : {
+                  url: serverConfig.url || "",
+                  transport: "sse",
+                },
+        };
+
+        const data = await ToolsService.getMcpTools({
+          requestBody: mcp_config,
+        });
+
+        if (data && data.tools) {
+          setServers((currentServers) => {
+            const updatedServers = currentServers.map((s) =>
+              s.name === serverConfig.name ? { ...s, tools: data.tools } : s
+            );
+            // 更新 server_tools
+            const serverTools = updatedServers.reduce(
+              (acc, server) => {
+                if (server.tools) {
+                  acc[server.name] = server.tools;
+                }
+                return acc;
+              },
+              {} as Record<string, any>
+            );
+            onNodeDataChange(node.id, "server_tools", serverTools);
+            updateMCPConfig(updatedServers);
+            return updatedServers;
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching tools:", error);
+        toast({
+          title: t("workflow.nodes.mcp.toolsFetchError"),
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setIsLoadingTools((prev) => ({ ...prev, [serverConfig.name]: false }));
+      }
+    },
+    [node.id, onNodeDataChange, t, toast, updateMCPConfig]
+  );
+
   useEffect(() => {
     if (node && node.data.input !== undefined) {
       setInputText(node.data.input);
@@ -189,18 +364,21 @@ const MCPNodeProperties: React.FC<MCPNodePropertiesProps> = ({
       setValue("model", node.data.model);
     }
     if (node && node.data.mcp_config) {
-      const serverConfigs: ServerConfig[] = Object.entries(node.data.mcp_config).map(
-        ([name, config]: [string, any]) => ({
-          name,
-          transport: config.transport,
-          ...(config.transport === 'stdio' ? {
-            command: config.command,
-            args: config.args,
-          } : {
-            url: config.url,
-          }),
-        })
-      );
+      const serverConfigs: ServerConfig[] = Object.entries(
+        node.data.mcp_config
+      ).map(([name, config]: [string, any]) => ({
+        name,
+        transport: config.transport,
+        ...(config.transport === "stdio"
+          ? {
+              command: config.command,
+              args: config.args,
+            }
+          : {
+              url: config.url,
+            }),
+        tools: node.data.server_tools?.[name] || [],
+      }));
       setServers(serverConfigs);
     }
   }, [node, setValue]);
@@ -238,28 +416,6 @@ const MCPNodeProperties: React.FC<MCPNodePropertiesProps> = ({
     availableVariables,
   });
 
-  const updateMCPConfig = useCallback((newServers: ServerConfig[]) => {
-    const mcp_config = newServers.reduce((acc, server) => {
-      if (!server.name) return acc;
-      
-      if (server.transport === 'stdio') {
-        acc[server.name] = {
-          command: server.command || 'python',
-          args: server.args || [],
-          transport: 'stdio'
-        };
-      } else {
-        acc[server.name] = {
-          url: server.url || '',
-          transport: 'sse'
-        };
-      }
-      return acc;
-    }, {} as Record<string, any>);
-
-    onNodeDataChange(node.id, "mcp_config", mcp_config);
-  }, [node.id, onNodeDataChange]);
-
   const handleAddServer = () => {
     setEditingServer(undefined);
     onOpen();
@@ -270,12 +426,17 @@ const MCPNodeProperties: React.FC<MCPNodePropertiesProps> = ({
     onOpen();
   };
 
-  const handleSaveServer = (serverData: ServerConfig) => {
+  const handleSaveServer = async (serverData: ServerConfig) => {
     const newServers = editingServer
       ? servers.map((s) => (s.name === editingServer.name ? serverData : s))
       : [...servers, serverData];
+
+    // 先更新服务器列表
     setServers(newServers);
     updateMCPConfig(newServers);
+
+    // 立即获取新服务器的tools
+    await fetchTools(serverData);
   };
 
   const handleDeleteServer = (server: ServerConfig) => {
@@ -339,6 +500,8 @@ const MCPNodeProperties: React.FC<MCPNodePropertiesProps> = ({
                 server={server}
                 onEdit={() => handleEditServer(server)}
                 onDelete={() => handleDeleteServer(server)}
+                tools={server.tools || []}
+                isLoadingTools={isLoadingTools[server.name] || false}
               />
             ))
           )}
@@ -391,4 +554,4 @@ const MCPNodeProperties: React.FC<MCPNodePropertiesProps> = ({
   );
 };
 
-export default MCPNodeProperties; 
+export default MCPNodeProperties;

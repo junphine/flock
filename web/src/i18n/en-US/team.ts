@@ -242,9 +242,13 @@ const translation = {
         editServer: "Edit Server",
         deleteServer: "Delete Server",
         serverType: {
-          stdio: "Standard IO",
-          sse: "Server-Sent Events"
+          stdio: "STDIO",
+          sse: "SSE"
         },
+        toolsList: "Available Tools",
+        loadingTools: "Loading tools...",
+        noToolsAvailable: "No tools available",
+        noTools: "No tools found",
         modal: {
           title: "Server Configuration",
           addTitle: "Add Server",
