@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 from sqlmodel import col, func, or_, select
+from loguru import logger
 
 from app.api.deps import CurrentUser, SessionDep
 from app.core.tools.api_tool import ToolDefinition
@@ -16,6 +17,7 @@ from app.models import (
     SkillUpdate,
     ToolDefinitionValidate,
 )
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
 router = APIRouter()
 
@@ -214,3 +216,27 @@ def update_skill_credentials(
     session.refresh(skill)
 
     return skill
+
+@router.post("/mcp/tools")
+async def get_mcp_tools(mcp_config: dict[str, Any]) -> Any:
+    """
+    获取MCP服务器的工具列表
+    """
+    try:
+        # 添加日志打印
+        logger.info(f"Received mcp_config: {mcp_config}")
+        
+        async with MultiServerMCPClient(mcp_config) as client:
+            tools = client.get_tools()
+            # 只返回工具的基本信息
+            tools_info = [{
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.args
+            } for tool in tools]
+            return {"tools": tools_info}
+    except Exception as e:
+        # 添加错误日志
+        logger.error(f"Error in get_mcp_tools: {str(e)}")
+        logger.exception(e)
+        raise HTTPException(status_code=400, detail=str(e))
