@@ -17,4 +17,3 @@ export type Upload = {
     chunk_size: number;
     chunk_overlap: number;
 };
-

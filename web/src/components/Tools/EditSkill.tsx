@@ -13,8 +13,8 @@ import {
   ModalOverlay,
 } from "@chakra-ui/react";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
-
-// import SkillEditor, { skillPlaceholder } from "./SkillEditor"
+import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
+import SkillEditor, { skillPlaceholder } from "./SkillEditor"
 import { useMutation, useQueryClient } from "react-query";
 
 import {
@@ -78,9 +78,9 @@ const EditSkill = ({ skill, isOpen, onClose }: EditSkillProps) => {
     onClose();
   };
 
-  // const resetSkillDefinitionHandler = () => {
-  //   setValue("tool_definition", skillPlaceholder)
-  // }
+  const resetSkillDefinitionHandler = () => {
+    setValue("tool_definition", skillPlaceholder)
+  }
 
   return (
     <>
@@ -139,24 +139,24 @@ const EditSkill = ({ skill, isOpen, onClose }: EditSkillProps) => {
                   <FormLabel htmlFor="tool_definition">
                     Skill Definition
                   </FormLabel>
-                  {/* <SkillEditor
+                  <SkillEditor
                     onChange={onChange}
                     onError={(message) =>
                       message
                         ? setError("tool_definition", { message })
                         : clearErrors("tool_definition")
                     }
-                    value={value as object}
-                  /> */}
+                    value={JSON.stringify(value, null, 2)}
+                  />
                   <FormErrorMessage>{error?.message}</FormErrorMessage>
-                  {/* <Button
+                  <Button
                     size="sm"
-                    leftIcon={<RxReset />}
+                    leftIcon={<DeleteIcon />}
                     mt={2}
                     onClick={resetSkillDefinitionHandler}
                   >
                     Reset Skill Definition
-                  </Button> */}
+                  </Button>
                 </FormControl>
               )}
             />

@@ -10,4 +10,3 @@ export type TeamChatPublic = {
     message?: (ChatMessage | null);
     interrupt?: (Interrupt | null);
 };
-

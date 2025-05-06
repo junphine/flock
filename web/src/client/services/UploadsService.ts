@@ -22,14 +22,14 @@ export class UploadsService {
      * @throws ApiError
      */
     public static readUploads({
-        status,
-        skip,
-        limit = 100,
-    }: {
-        status?: (UploadStatus | null),
-        skip?: number,
-        limit?: number,
-    }): CancelablePromise<UploadsOut> {
+status,
+skip,
+limit = 100,
+}: {
+status?: (UploadStatus | null),
+skip?: number,
+limit?: number,
+}): CancelablePromise<UploadsOut> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/uploads/',
@@ -51,10 +51,10 @@ export class UploadsService {
      * @throws ApiError
      */
     public static createUpload({
-        formData,
-    }: {
-        formData: Body_uploads_create_upload,
-    }): CancelablePromise<UploadOut> {
+formData,
+}: {
+formData: Body_uploads_create_upload,
+}): CancelablePromise<UploadOut> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/uploads/',
@@ -73,14 +73,14 @@ export class UploadsService {
      * @throws ApiError
      */
     public static updateUpload({
-        id,
-        contentLength,
-        formData,
-    }: {
-        id: number,
-        contentLength: number,
-        formData?: Body_uploads_update_upload,
-    }): CancelablePromise<UploadOut> {
+id,
+contentLength,
+formData,
+}: {
+id: number,
+contentLength: number,
+formData?: Body_uploads_update_upload,
+}): CancelablePromise<UploadOut> {
         return __request(OpenAPI, {
             method: 'PUT',
             url: '/api/v1/uploads/{id}',
@@ -104,10 +104,10 @@ export class UploadsService {
      * @throws ApiError
      */
     public static deleteUpload({
-        id,
-    }: {
-        id: number,
-    }): CancelablePromise<Message> {
+id,
+}: {
+id: number,
+}): CancelablePromise<Message> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/uploads/{id}',
@@ -127,12 +127,12 @@ export class UploadsService {
      * @throws ApiError
      */
     public static searchUpload({
-        uploadId,
-        requestBody,
-    }: {
-        uploadId: number,
-        requestBody: Record<string, any>,
-    }): CancelablePromise<any> {
+uploadId,
+requestBody,
+}: {
+uploadId: number,
+requestBody: Record<string, any>,
+}): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/uploads/{upload_id}/search',
@@ -154,10 +154,10 @@ export class UploadsService {
      * @throws ApiError
      */
     public static getSearchResults({
-        taskId,
-    }: {
-        taskId: string,
-    }): CancelablePromise<any> {
+taskId,
+}: {
+taskId: string,
+}): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/uploads/{upload_id}/search/{task_id}',

@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import List
 
 import requests
 from langchain_community.embeddings import HuggingFaceEmbeddings

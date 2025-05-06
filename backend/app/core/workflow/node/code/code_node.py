@@ -8,6 +8,7 @@ import uuid
 import os
 import ast
 from textwrap import dedent
+from typing import List
 
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig

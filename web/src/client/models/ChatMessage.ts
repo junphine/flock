@@ -10,4 +10,3 @@ export type ChatMessage = {
     content: string;
     imgdata?: (string | null);
 };
-

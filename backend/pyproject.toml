@@ -30,7 +30,6 @@ langchain = "^0.3.7"
 langchain-community = "^0.3.5"
 langchain-core = "^0.3.28"
 langchain-experimental = "^0.3.3"
-langchain-openai = "^0.2.6"
 langchain-text-splitters = "^0.3.2"
 
 langgraph = "^0.2.60"
@@ -114,7 +113,8 @@ ignore = [
 # Preserve types, even if a file imports `from __future__ import annotations`.
 keep-runtime-typing = true
 
+
 [[tool.poetry.source]]
-name = "mirrors"
-url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple"
 priority = "primary"

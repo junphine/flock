@@ -14,8 +14,8 @@ import {
 } from "@chakra-ui/react";
 import { Controller, type SubmitHandler, useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "react-query";
-
-// import SkillEditor, { skillPlaceholder } from "./SkillEditor"
+import { AddIcon, EditIcon, DeleteIcon } from "@chakra-ui/icons";
+import SkillEditor, { skillPlaceholder } from "./SkillEditor"
 import { type ApiError, type SkillCreate, ToolsService } from "../../client";
 import useCustomToast from "../../hooks/useCustomToast";
 
@@ -42,7 +42,7 @@ const AddSkill = ({ isOpen, onClose }: AddSkillProps) => {
     defaultValues: {
       name: "",
       description: "",
-      // tool_definition: skillPlaceholder,
+      tool_definition: skillPlaceholder,
     },
   });
 
@@ -70,9 +70,9 @@ const AddSkill = ({ isOpen, onClose }: AddSkillProps) => {
     mutation.mutate(data);
   };
 
-  // const resetSkillDefinitionHandler = () => {
-  //   setValue("tool_definition", skillPlaceholder)
-  // }
+  const resetSkillDefinitionHandler = () => {
+    setValue("tool_definition", skillPlaceholder)
+  }
 
   return (
     <>
@@ -132,7 +132,7 @@ const AddSkill = ({ isOpen, onClose }: AddSkillProps) => {
                   <FormLabel htmlFor="tool_definition">
                     Skill Definition
                   </FormLabel>
-                  {/* <SkillEditor
+                  <SkillEditor
                     onChange={onChange}
                     onError={(message) =>
                       message
@@ -140,16 +140,16 @@ const AddSkill = ({ isOpen, onClose }: AddSkillProps) => {
                         : clearErrors("tool_definition")
                     }
                     value={value as object}
-                  /> */}
+                  />
                   <FormErrorMessage>{error?.message}</FormErrorMessage>
-                  {/* <Button
+                  <Button
                     size="sm"
-                    leftIcon={<RxReset />}
+                    leftIcon={<DeleteIcon />}
                     mt={2}
                     onClick={resetSkillDefinitionHandler}
                   >
                     Reset Skill Definition
-                  </Button> */}
+                  </Button>
                 </FormControl>
               )}
             />

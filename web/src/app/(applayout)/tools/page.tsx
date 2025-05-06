@@ -82,7 +82,7 @@ function Skills() {
     defaultTab: "all",
   });
 
-  const filteredSkills = skills?.filter((skill) => skill.name !== "ask-human");
+  const filteredSkills = skills?.filter((skill) => skill.name !== "ask-human" && (activeTab=='all' || activeTab=='managed' && skill.managed || activeTab=='def' && !skill.managed));
   const [selectedSkill, setSelectedSkill] = useState<SkillOut | null>(null);
 
   return (
@@ -150,9 +150,7 @@ function Skills() {
                         <ToolsIcon
                           h="6"
                           w="6"
-                          tools_name={skill
-                            .display_name!.toLowerCase()
-                            .replace(/ /g, "_")}
+                          tools_name={skill.name.toLowerCase().replace(/ /g, "_")}
                           color={`${skill.managed ? "blue" : "purple"}.500`}
                         />
                       </Box>
