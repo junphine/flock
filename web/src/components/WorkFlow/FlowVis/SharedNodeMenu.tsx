@@ -226,7 +226,7 @@ const SharedNodeMenu: React.FC<SharedNodeMenuProps> = ({
                             size={"sm"}
                           >
                             <ToolsIcon
-                              tools_name={tool.display_name!.replace(/ /g, "_")}
+                              tools_name={(tool.display_name || tool.name)?.replace(/ /g, "_")}
                               color="blue.500"
                               boxSize={4}
                             />

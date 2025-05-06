@@ -28,7 +28,7 @@ const Sidebar = () => {
         flexDir="column"
         justify="space-between"
         bg={secBgColor}
-        p={4}
+        p={1}
         borderRadius="xl"
         h="full"
         transition="all 0.2s"

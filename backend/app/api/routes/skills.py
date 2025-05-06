@@ -132,7 +132,7 @@ def update_skill(
     update_dict = skill_in.model_dump(exclude_unset=True)
 
     # 处理 credentials 字段
-    if "credentials" in update_dict:
+    if "credentials" in update_dict and update_dict['credentials']:
         if skill.credentials is None:
             skill.credentials = {}
         skill.credentials.update(update_dict["credentials"])

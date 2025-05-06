@@ -21,7 +21,7 @@ export const skillPlaceholder = `{
         }
     }
   },
-  "url": "http://localhostt:8000/api/v1/skills/my-skill"
+  "url": "http://localhost:8000/api/v1/skills/my-skill"
 }`
 
 const SkillEditor: React.FC<SkillEditorProps> = ({ value, onChange, onError }) => {

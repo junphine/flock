@@ -41,6 +41,9 @@
   <component name="DBNavigator.Project.DatabaseSessionManager">
     <connection id="c5d3bd6c-2117-466b-874a-3dab4578e70f" />
   </component>
+  <component name="DBNavigator.Project.DatasetFilterManager">
+    <filter-actions connection-id="c5d3bd6c-2117-466b-874a-3dab4578e70f" dataset="public.member" active-filter-id="EMPTY_FILTER" />
+  </component>
   <component name="DBNavigator.Project.ExecutionManager">
     <retain-sticky-names value="false" />
   </component>

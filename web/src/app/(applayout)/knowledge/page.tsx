@@ -161,6 +161,8 @@ function Uploads() {
       .replace(/\//g, "-");
   };
 
+  const filteredDatas = uploads.data?.filter((doc) => (activeTab=='all' || activeTab==doc.file_type));
+
   return (
     <Flex h="full">
       <Box flex="1" bg="ui.bgMain" display="flex" flexDirection="column" h="full">
@@ -187,7 +189,7 @@ function Uploads() {
           ) : (
             uploads && (
               <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={6}>
-                {uploads.data.map((upload) => (
+                {filteredDatas.map((upload) => (
                   <Box
                     key={upload.id}
                     onClick={() => handleUploadClick(upload.id)}

@@ -9,6 +9,5 @@
 
 backend/fastembed_cache
 
-backend/poetry.lock
 
 backend/uploads/
