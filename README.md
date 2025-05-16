@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/onelevenvy-flock-badge.png)](https://mseep.ai/app/onelevenvy-flock)
+
 ## 📃 Flock (Flexible Low-code Orchestrating Collaborative-agent Kits)
 
 <p align="center">
@@ -8,6 +10,14 @@
 </p>
 
 > [!NOTE]
+>
+> ### 🎉 What's New 2025/5/9
+>
+> - **Agent Node Support**: Added dedicated Agent Node for seamless agent integration in workflows! Key features:
+>   - 🧠 Create autonomous agents that can reason, plan, and execute tasks
+>   - 🔄 Support for multiple agent types and architectures
+>   - 🛠️ Easy configuration of agent tools, and behaviors
+>   - 🔗 Seamless integration with other workflow nodes
 >
 > ### 🎉 What's New 2025/3/10
 >

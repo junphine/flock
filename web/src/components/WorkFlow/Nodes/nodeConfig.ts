@@ -11,6 +11,7 @@ import {
   FaProjectDiagram,
   FaCrosshairs,
   FaMicrochip,
+  FaUserAstronaut,
 } from "react-icons/fa";
 import { FaBookAtlas, FaPeopleGroup } from "react-icons/fa6";
 import { TfiGithub } from "react-icons/tfi";
@@ -34,6 +35,7 @@ import HumanNodeProperties from "./Human/HumanNodeProperties";
 import SubgraphNodeProperties from "./Subgraph/SubgraphNodeProperties";
 import ParameterExtractorNodeProperties from "./ParameterExtractor/ParameterExtractorNodeProperties";
 import MCPNodeProperties from './MCPTool/MCPNodeProperties';
+import AgentNodeProperties from './Agent/AgentNodeProperties';
 
 interface NodeConfigItem {
   display: string;
@@ -90,6 +92,26 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
     },
     inputVariables: [],
     outputVariables: ["response"],
+  },
+  agent: {
+    display: "Agent",
+    icon: FaUserAstronaut,
+    colorScheme: "yellow",
+    properties: AgentNodeProperties,
+    allowedConnections: {
+      sources: ["left", "right"],
+      targets: ["left", "right"],
+    },
+    outputVariables: ["response"],
+    inputVariables: [],
+    initialData: {
+      model: "glm-4-flash",
+      temperature: 0.1,
+      systemMessage: "",
+      userMessage: "",
+      tools: [],
+      retrievalTools: [],
+    }
   },
   tool: {
     display: "Tools",
@@ -311,20 +333,21 @@ export const nodeConfig: Record<string, NodeConfigItem> = {
   mcpTool: {
     display: "MCP Tool",
     icon: FaMicrochip,
-    colorScheme: "cyan",
+    colorScheme: "purple",
     properties: MCPNodeProperties,
     allowedConnections: {
       sources: ["right"],
       targets: ["left"],
     },
+    outputVariables: ["response"],
+    inputVariables: [],
     initialData: {
-      model: "glm-4-flash",
+      model: "",
       input: "",
       mcp_config: {},
-    },
-    inputVariables: [],
-    outputVariables: ["response"],
+    }
   },
+  
 };
 
 export type NodeType = keyof typeof nodeConfig;
